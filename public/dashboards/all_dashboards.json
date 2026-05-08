@@ -1,7 +1,7 @@
 {
 	"data": [
 		{
-			"name": "祝你好孕",
+			"name": "交易數據概覽",
 			"index": "born-in-Taipei",
 			"components": [
 				"200",
@@ -13,64 +13,120 @@
 				"206",
 				"207"
 			],
-			"icon": "crib"
+			"icon": "bar_chart"
 		},
 		{
-			"name": "YouBike研究",
+			"name": "物流配送分析",
 			"index": "youbike",
-			"components": ["60", "142", "143", "144", "145", "146", "147"],
-			"icon": "pedal_bike"
+			"components": [
+				"60",
+				"142",
+				"143",
+				"144",
+				"145",
+				"146",
+				"147"
+			],
+			"icon": "local_shipping"
 		},
 		{
-			"name": "民情熱議",
+			"name": "市場輿情分析",
 			"index": "public-opinion",
-			"components": ["5", "72"],
-			"icon": "mic"
+			"components": [
+				"72"
+			],
+			"icon": "campaign"
 		},
 		{
-			"name": "社會安全",
+			"name": "市場安全管理",
 			"index": "security",
-			"components": ["8", "7", "83", "22", "107"],
-			"icon": "security"
+			"components": [
+				"8",
+				"7",
+				"83",
+				"22",
+				"107"
+			],
+			"icon": "shield"
 		},
 		{
-			"name": "交通運輸",
+			"name": "運輸物流管理",
 			"index": "transport",
-			"components": ["73", "116", "114", "79", "60", "57", "26"],
-			"icon": "train"
+			"components": [
+				"73",
+				"116",
+				"114",
+				"79",
+				"60",
+				"57",
+				"26"
+			],
+			"icon": "directions_car"
 		},
 		{
-			"name": "城市建設",
+			"name": "批發市場治理",
 			"index": "construction",
-			"components": ["140", "34", "42", "108", "20", "28", "33"],
-			"icon": "construction"
+			"components": [
+				"140",
+				"34",
+				"42",
+				"108",
+				"20",
+				"28",
+				"33"
+			],
+			"icon": "storefront"
 		},
 		{
-			"name": "生態環境",
+			"name": "食安環境監控",
 			"index": "environment",
-			"components": ["141", "110", "103", "104", "111", "43", "59"],
-			"icon": "forest"
+			"components": [
+				"141",
+				"110",
+				"103",
+				"104",
+				"111",
+				"43",
+				"59"
+			],
+			"icon": "eco"
 		},
 		{
-			"name": "社會福利",
+			"name": "員工社區關係",
 			"index": "welfare",
-			"components": ["90", "82", "29"],
-			"icon": "handshake"
+			"components": [
+				"90",
+				"82",
+				"29"
+			],
+			"icon": "groups"
 		},
 		{
-			"name": "測試組件",
+			"name": "系統功能測試",
 			"index": "testing",
-			"components": ["150", "117", "118", "61", "74"],
+			"components": [
+				"150",
+				"117",
+				"118",
+				"61",
+				"74"
+			],
 			"icon": "bug_report"
 		},
 		{
 			"name": "收藏組件",
 			"index": "favorites",
-			"components": ["108", "22", "79", "60", "107"],
+			"components": [
+				"108",
+				"22",
+				"79",
+				"60",
+				"107"
+			],
 			"icon": "favorite"
 		},
 		{
-			"name": "圖資資訊",
+			"name": "市場地圖資訊",
 			"index": "map-layers",
 			"components": [
 				"32",

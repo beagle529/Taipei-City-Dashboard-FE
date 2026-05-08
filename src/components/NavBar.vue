@@ -39,8 +39,10 @@ const linkQuery = computed(() => {
 			<router-link :to="`/mapview${linkQuery}`">地圖交叉比對</router-link>
 		</div>
 		<div class="navbar-user">
-			<a href="https://tuic.gov.taipei/documentation/front-end" target="_blank"
-				rel="noreferrer"><button><span>help</span></button></a>
+			<router-link to="/help"><button title="操作說明"><span>help</span></button></router-link>
+			<a :href="$router.resolve('/admin').href" target="_blank" rel="noopener" class="hide-if-mobile">
+				<button title="管理後台（新分頁）"><span>admin_panel_settings</span></button>
+			</a>
 			<button class="hide-if-mobile" @click="toggle"><span>{{ isFullscreen ? 'fullscreen_exit' : 'fullscreen'
 			}}</span></button>
 			<div class="navbar-user-user hide-if-mobile">

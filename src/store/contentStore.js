@@ -72,7 +72,7 @@ export const useContentStore = defineStore("content", {
 			axios
 				.get(`${BASE_URL}/dashboards/all_dashboards.json`)
 				.then((rs) => {
-					this.dashboards = rs.data.data;
+					this.dashboards = rs.data.data.filter(d => !d.hidden);
 					if (!this.currentDashboard.index) {
 						this.currentDashboard.index = this.dashboards[0].index;
 						router.replace({
@@ -133,11 +133,9 @@ export const useContentStore = defineStore("content", {
 			}
 			this.currentDashboard.name = currentDashboardInfo.name;
 			this.currentDashboard.icon = currentDashboardInfo.icon;
-			this.currentDashboard.content = currentDashboardInfo.components.map(
-				(item) => {
-					return this.components[item];
-				}
-			);
+			this.currentDashboard.content = currentDashboardInfo.components
+				.map((item) => this.components[item])
+				.filter(Boolean);
 			// no need to call additional chart data APIs for the map layers dashboard
 			if (this.currentDashboard.index === "map-layers") {
 				return;

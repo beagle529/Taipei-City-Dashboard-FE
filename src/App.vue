@@ -10,6 +10,7 @@ Testing: Jack Huang (Data Scientist), Ian Huang (Data Analysis Intern)
 
 <script setup>
 import { onBeforeMount, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { useAuthStore } from './store/authStore';
 import { useDialogStore } from './store/dialogStore';
 
@@ -19,6 +20,7 @@ import SettingsBar from './components/SettingsBar.vue';
 import NotificationBar from './components/dialogs/NotificationBar.vue';
 import InitialWarning from './components/dialogs/InitialWarning.vue';
 
+const route = useRoute();
 const authStore = useAuthStore();
 const dialogStore = useDialogStore();
 
@@ -43,7 +45,10 @@ onMounted(() => {
 </script>
 
 <template>
-	<div class="app-container">
+	<!-- Admin / Help pages use their own standalone layout -->
+	<RouterView v-if="route.path.startsWith('/admin') || route.path.startsWith('/help')" />
+
+	<div v-else class="app-container">
 		<NotificationBar />
 		<NavBar />
 		<div class="app-content">

@@ -7,27 +7,40 @@ import DialogContainer from './DialogContainer.vue';
 
 const dialogStore = useDialogStore();
 
-const allInputs = ref({
-	type: "組件基本資訊有誤",
-	description: "",
-	name: "",
-});
+const allInputs = ref({ type: "組件基本資訊有誤", description: "", name: "" });
 const issueTypes = ["組件基本資訊有誤", "組件資料有誤或未更新", "系統問題", "其他建議"];
+const submitting = ref(false);
+const submitted = ref(false);
+const submitError = ref("");
 
-function handleSubmit() {
-	const currentDate = new Date().toJSON().slice(0, 10).replaceAll("-", "");
-	const secondaryLabel = allInputs.value.type === "其他建議" ? "enhancement" : "bug";
-	const issueTitle = `[from-demo] ${currentDate} ${allInputs.value.type} - ${dialogStore.issue.id} | ${dialogStore.issue.name}`;
-	const issueBody = allInputs.value.description.replaceAll('\n', '%0D%0A') + '%0D%0A%0D%0A' + 'Issue Opener: ' + allInputs.value.name;
-	window.open(`https://github.com/tpe-doit/Taipei-City-Dashboard-FE/issues/new?assignees=igorho2000&labels=from-demo,${secondaryLabel}&title=${issueTitle}&body=${issueBody}`);
-	handleClose();
+async function handleSubmit() {
+	submitting.value = true;
+	submitError.value = "";
+	try {
+		const res = await fetch("/api/issues", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				component_id: dialogStore.issue.id,
+				component_name: dialogStore.issue.name,
+				type: allInputs.value.type,
+				description: allInputs.value.description,
+				name: allInputs.value.name,
+			}),
+		});
+		if (!res.ok) { submitError.value = "送出失敗，請稍後再試"; return; }
+		submitted.value = true;
+		setTimeout(handleClose, 1500);
+	} catch {
+		submitError.value = "無法連線，請確認網路狀態";
+	} finally {
+		submitting.value = false;
+	}
 }
 function handleClose() {
-	allInputs.value = {
-		type: "組件基本資訊有誤",
-		description: "",
-		name: "",
-	};
+	allInputs.value = { type: "組件基本資訊有誤", description: "", name: "" };
+	submitted.value = false;
+	submitError.value = "";
 	dialogStore.dialogs.reportIssue = false;
 }
 </script>
@@ -36,24 +49,31 @@ function handleClose() {
 	<DialogContainer dialog="reportIssue" @on-close="handleClose">
 		<div class="reportissue">
 			<h2>回報問題</h2>
-			<h3>問題種類*</h3>
-			<div v-for="item in issueTypes" :key="item">
-				<input class="reportissue-radio" type="radio" v-model="allInputs.type" :value="item" :id="item" />
-				<label :for="item">
-					<div></div>
-					{{ item }}
-				</label>
-			</div>
-			<h3>問題簡述*</h3>
-			<textarea v-model="allInputs.description"></textarea>
-			<h3>姓名*</h3>
-			<input class="reportissue-input" type="text" v-model="allInputs.name" />
-			<div class="reportissue-control">
-				<button class="reportissue-control-cancel" @click="handleClose">取消</button>
-				<button v-if="allInputs.description && allInputs.name" class="reportissue-control-confirm"
-					@click="handleSubmit">開立 GitHub
-					Issue</button>
-			</div>
+			<div v-if="submitted" class="reportissue-success">✓ 回報成功！感謝您的意見，我們將盡快處理。</div>
+			<template v-else>
+				<h3>問題種類*</h3>
+				<div v-for="item in issueTypes" :key="item">
+					<input class="reportissue-radio" type="radio" v-model="allInputs.type" :value="item" :id="item" />
+					<label :for="item">
+						<div></div>
+						{{ item }}
+					</label>
+				</div>
+				<h3>問題簡述*</h3>
+				<textarea v-model="allInputs.description"></textarea>
+				<h3>姓名*</h3>
+				<input class="reportissue-input" type="text" v-model="allInputs.name" />
+				<p v-if="submitError" class="reportissue-error">{{ submitError }}</p>
+				<div class="reportissue-control">
+					<button class="reportissue-control-cancel" @click="handleClose">取消</button>
+					<button
+						v-if="allInputs.description && allInputs.name"
+						class="reportissue-control-confirm"
+						:disabled="submitting"
+						@click="handleSubmit"
+					>{{ submitting ? '送出中…' : '送出回報' }}</button>
+				</div>
+			</template>
 		</div>
 	</DialogContainer>
 </template>
@@ -136,6 +156,19 @@ function handleClose() {
 			outline: none;
 			border: solid 1px var(--color-highlight);
 		}
+	}
+
+	&-success {
+		padding: 1.5rem 0;
+		color: #4ade80;
+		font-size: var(--font-m);
+		text-align: center;
+	}
+
+	&-error {
+		color: #f87171;
+		font-size: var(--font-s);
+		margin: 0.25rem 0 0;
 	}
 
 	&-control {

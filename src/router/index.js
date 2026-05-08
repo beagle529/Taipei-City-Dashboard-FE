@@ -13,6 +13,8 @@ import { useContentStore } from "../store/contentStore";
 import { useMapStore } from "../store/mapStore";
 import DashboardView from "../views/DashboardView.vue";
 import MapView from "../views/MapView.vue";
+import AdminView from "../views/AdminView.vue";
+import HelpView from "../views/HelpView.vue";
 
 const routes = [
 	{
@@ -28,6 +30,16 @@ const routes = [
 		path: "/mapview",
 		name: "mapview",
 		component: MapView,
+	},
+	{
+		path: "/admin",
+		name: "admin",
+		component: AdminView,
+	},
+	{
+		path: "/help",
+		name: "help",
+		component: HelpView,
 	},
 	{
 		path: "/:pathMatch(.*)*",
