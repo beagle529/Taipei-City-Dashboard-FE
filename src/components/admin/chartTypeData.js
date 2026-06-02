@@ -171,4 +171,155 @@ export const CHART_TYPE_DATA = {
             <circle cx="32" cy="34" r="3" fill="white" stroke="${C2}" stroke-width="1.5"/>
         </svg>`,
     },
+    RealNameTable: {
+        desc: "實名制統計表。顯示蔬菜／水果實名制筆數、件數、重量及供應人數，適合每日人工上傳。",
+        icon: `<svg viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="4"  width="56" height="9"  rx="1" fill="#1a3020" stroke="#3a6040" stroke-width="0.5"/>
+            <text x="8" y="11" font-size="5.5" fill="#6ee79c">蔬菜</text>
+            <text x="22" y="11" font-size="4.5" fill="#888">筆數</text>
+            <text x="34" y="11" font-size="4.5" fill="#888">件數</text>
+            <text x="46" y="11" font-size="4.5" fill="#888">重量</text>
+            <rect x="4" y="14" width="56" height="6"  rx="0" fill="#1a1c1e" stroke="#3a3c3e" stroke-width="0.5"/>
+            <text x="8" y="19" font-size="4" fill="#bbb">非實名制</text>
+            <rect x="4" y="21" width="56" height="6"  rx="0" fill="#202224" stroke="#3a3c3e" stroke-width="0.5"/>
+            <text x="8" y="26" font-size="4" fill="#bbb">實名制</text>
+            <rect x="4" y="28" width="56" height="5"  rx="0" fill="#252830" stroke="#3a3c3e" stroke-width="0.5"/>
+            <text x="8" y="32" font-size="4" fill="#ccc">總筆數</text>
+            <rect x="4" y="34" width="56" height="7"  rx="0" fill="#2e2800" stroke="#504500" stroke-width="0.5"/>
+            <text x="8" y="39" font-size="4.5" fill="#ffd700">供應人數量</text>
+            <text x="44" y="39" font-size="5" font-weight="bold" fill="#ffd700">3168</text>
+        </svg>`,
+    },
+    StackedColumnChart: {
+        desc: "堆疊直條圖（分組）。X 軸為時間或類別，Y 軸為各子項目的堆疊數值。當資料含有「群組_系列」格式時，自動顯示群組切換標籤。適合品質等級、各類別組成等多維度時序資料。",
+        icon: `<svg viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg">
+            <line x1="6" y1="38" x2="60" y2="38" stroke="${AX}" stroke-width="1.5"/>
+            <!-- group A: 2 stacked bars -->
+            <rect x="8"  y="26" width="8" height="12" fill="${C1}" rx="1"/>
+            <rect x="8"  y="16" width="8" height="10" fill="${C2}" rx="1"/>
+            <rect x="8"  y="10" width="8" height="6"  fill="${C3}" rx="1"/>
+            <!-- group B -->
+            <rect x="18" y="22" width="8" height="16" fill="${C1}" rx="1"/>
+            <rect x="18" y="13" width="8" height="9"  fill="${C2}" rx="1"/>
+            <rect x="18" y="8"  width="8" height="5"  fill="${C3}" rx="1"/>
+            <!-- group C -->
+            <rect x="28" y="24" width="8" height="14" fill="${C1}" rx="1"/>
+            <rect x="28" y="15" width="8" height="9"  fill="${C2}" rx="1"/>
+            <rect x="28" y="10" width="8" height="5"  fill="${C3}" rx="1"/>
+            <!-- group D -->
+            <rect x="38" y="20" width="8" height="18" fill="${C1}" rx="1"/>
+            <rect x="38" y="12" width="8" height="8"  fill="${C2}" rx="1"/>
+            <rect x="38" y="7"  width="8" height="5"  fill="${C3}" rx="1"/>
+            <!-- tab indicators -->
+            <rect x="6"  y="1" width="10" height="4" fill="${C1}" rx="1" opacity="0.9"/>
+            <rect x="18" y="1" width="10" height="4" fill="${AX}" rx="1" opacity="0.5"/>
+        </svg>`,
+    },
+    DataTable: {
+        desc: "資料表格。以列表方式顯示多欄位的記錄資料，支援點擊欄位標題排序。適合維修記錄、違規事件、進場人員清單等需要逐筆檢視的表格資料。",
+        icon: `<svg viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg">
+            <!-- header row -->
+            <rect x="4" y="4" width="56" height="7" fill="#282a2c" rx="1"/>
+            <line x1="4" y1="4" x2="60" y2="4" stroke="${C1}" stroke-width="1"/>
+            <line x1="4" y1="11" x2="60" y2="11" stroke="${AX}" stroke-width="0.5"/>
+            <!-- col dividers in header -->
+            <line x1="22" y1="4" x2="22" y2="11" stroke="${AX}" stroke-width="0.5"/>
+            <line x1="40" y1="4" x2="40" y2="11" stroke="${AX}" stroke-width="0.5"/>
+            <!-- header text placeholders -->
+            <rect x="6"  y="6" width="12" height="3" fill="${C1}" rx="1" opacity="0.8"/>
+            <rect x="24" y="6" width="12" height="3" fill="${AX}" rx="1" opacity="0.5"/>
+            <rect x="42" y="6" width="12" height="3" fill="${AX}" rx="1" opacity="0.5"/>
+            <!-- data rows -->
+            <rect x="6"  y="14" width="10" height="2.5" fill="${C2}" rx="1" opacity="0.7"/>
+            <rect x="24" y="14" width="14" height="2.5" fill="${AX}" rx="1" opacity="0.4"/>
+            <rect x="42" y="14" width="8"  height="2.5" fill="${C3}" rx="1" opacity="0.5"/>
+            <rect x="6"  y="20" width="12" height="2.5" fill="${C2}" rx="1" opacity="0.7"/>
+            <rect x="24" y="20" width="10" height="2.5" fill="${AX}" rx="1" opacity="0.4"/>
+            <rect x="42" y="20" width="11" height="2.5" fill="${C4}" rx="1" opacity="0.5"/>
+            <rect x="6"  y="26" width="9"  height="2.5" fill="${C2}" rx="1" opacity="0.7"/>
+            <rect x="24" y="26" width="16" height="2.5" fill="${AX}" rx="1" opacity="0.4"/>
+            <rect x="42" y="26" width="9"  height="2.5" fill="${C3}" rx="1" opacity="0.5"/>
+            <rect x="6"  y="32" width="13" height="2.5" fill="${C2}" rx="1" opacity="0.7"/>
+            <rect x="24" y="32" width="12" height="2.5" fill="${AX}" rx="1" opacity="0.4"/>
+            <rect x="42" y="32" width="10" height="2.5" fill="${C4}" rx="1" opacity="0.5"/>
+            <!-- row dividers -->
+            <line x1="4" y1="17.5" x2="60" y2="17.5" stroke="${AX}" stroke-width="0.3" opacity="0.5"/>
+            <line x1="4" y1="23.5" x2="60" y2="23.5" stroke="${AX}" stroke-width="0.3" opacity="0.5"/>
+            <line x1="4" y1="29.5" x2="60" y2="29.5" stroke="${AX}" stroke-width="0.3" opacity="0.5"/>
+        </svg>`,
+    },
+    ScatterChart: {
+        desc: "散佈圖。以 X/Y 座標呈現兩個連續變數的關係，適合觀察相關性或分群分布。",
+        icon: `<svg viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg">
+            <line x1="8" y1="2" x2="8"  y2="38" stroke="${AX}" stroke-width="1.2"/>
+            <line x1="8" y1="38" x2="60" y2="38" stroke="${AX}" stroke-width="1.2"/>
+            <circle cx="18" cy="28" r="3" fill="${C1}" opacity="0.9"/>
+            <circle cx="26" cy="22" r="3" fill="${C1}" opacity="0.9"/>
+            <circle cx="22" cy="32" r="3" fill="${C2}" opacity="0.9"/>
+            <circle cx="34" cy="16" r="3" fill="${C1}" opacity="0.9"/>
+            <circle cx="38" cy="24" r="3" fill="${C2}" opacity="0.9"/>
+            <circle cx="44" cy="12" r="3" fill="${C1}" opacity="0.9"/>
+            <circle cx="50" cy="20" r="3" fill="${C2}" opacity="0.9"/>
+            <circle cx="30" cy="30" r="3" fill="${C3}" opacity="0.9"/>
+            <circle cx="48" cy="30" r="3" fill="${C3}" opacity="0.9"/>
+        </svg>`,
+    },
+    LineColumnChart: {
+        desc: "折線柱狀混合圖。主要數值用柱狀圖，趨勢指標用折線圖疊加，適合同時呈現量與趨勢。",
+        icon: `<svg viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg">
+            <line x1="8" y1="2" x2="8"  y2="38" stroke="${AX}" stroke-width="1.2"/>
+            <line x1="8" y1="38" x2="60" y2="38" stroke="${AX}" stroke-width="1.2"/>
+            <!-- columns -->
+            <rect x="12" y="18" width="7" height="20" fill="${C1}" rx="1" opacity="0.85"/>
+            <rect x="23" y="10" width="7" height="28" fill="${C1}" rx="1" opacity="0.85"/>
+            <rect x="34" y="22" width="7" height="16" fill="${C1}" rx="1" opacity="0.85"/>
+            <rect x="45" y="14" width="7" height="24" fill="${C1}" rx="1" opacity="0.85"/>
+            <!-- line overlay -->
+            <polyline points="15,22 26,14 37,18 48,10"
+                fill="none" stroke="${C3}" stroke-width="2" stroke-linejoin="round"/>
+            <circle cx="15" cy="22" r="2.5" fill="${C3}"/>
+            <circle cx="26" cy="14" r="2.5" fill="${C3}"/>
+            <circle cx="37" cy="18" r="2.5" fill="${C3}"/>
+            <circle cx="48" cy="10" r="2.5" fill="${C3}"/>
+        </svg>`,
+    },
+    MarketFloorChart: {
+        desc: "市場樓層圖。以互動式平面圖顯示各區成交量、進場人數、均價與燈光狀態，支援點擊區域展開甲乙丙明細。",
+        icon: `<svg viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg">
+            <!-- floor plan outline -->
+            <rect x="4" y="4" width="56" height="36" fill="#1a1c1e" stroke="${AX}" stroke-width="1" rx="1"/>
+            <!-- vegetable zone -->
+            <rect x="6" y="6" width="24" height="32" fill="${C1}" opacity="0.45" rx="1"/>
+            <text x="18" y="24" text-anchor="middle" font-size="5" fill="#fff">蔬菜區</text>
+            <!-- fruit zone -->
+            <rect x="32" y="6" width="26" height="26" fill="${C2}" opacity="0.45" rx="1"/>
+            <text x="45" y="21" text-anchor="middle" font-size="5" fill="#fff">水果區</text>
+            <!-- banana zone -->
+            <rect x="32" y="34" width="26" height="6" fill="${C4}" opacity="0.55" rx="1"/>
+            <text x="45" y="38.5" text-anchor="middle" font-size="4.5" fill="#fff">芭樂香蕉區</text>
+        </svg>`,
+    },
+    CandlestickChart: {
+        desc: "K線圖（蠟燭圖）。顯示開高低收四個價格，紅綠配色代表漲跌，適合金融市場與交易量分析。",
+        icon: `<svg viewBox="0 0 64 44" xmlns="http://www.w3.org/2000/svg">
+            <line x1="8" y1="2" x2="8"  y2="42" stroke="${AX}" stroke-width="1.2"/>
+            <line x1="8" y1="42" x2="62" y2="42" stroke="${AX}" stroke-width="1.2"/>
+            <!-- candle 1 - up (green) -->
+            <line x1="17" y1="8"  x2="17" y2="14" stroke="${C3}" stroke-width="1.5"/>
+            <rect x="13" y="14" width="8" height="12" fill="${C3}" rx="1"/>
+            <line x1="17" y1="26" x2="17" y2="32" stroke="${C3}" stroke-width="1.5"/>
+            <!-- candle 2 - down (red) -->
+            <line x1="29" y1="12" x2="29" y2="18" stroke="#f87171" stroke-width="1.5"/>
+            <rect x="25" y="18" width="8" height="10" fill="#f87171" rx="1"/>
+            <line x1="29" y1="28" x2="29" y2="34" stroke="#f87171" stroke-width="1.5"/>
+            <!-- candle 3 - up (green) -->
+            <line x1="41" y1="10" x2="41" y2="16" stroke="${C3}" stroke-width="1.5"/>
+            <rect x="37" y="16" width="8" height="14" fill="${C3}" rx="1"/>
+            <line x1="41" y1="30" x2="41" y2="36" stroke="${C3}" stroke-width="1.5"/>
+            <!-- candle 4 - down (red) -->
+            <line x1="53" y1="14" x2="53" y2="20" stroke="#f87171" stroke-width="1.5"/>
+            <rect x="49" y="20" width="8" height="8" fill="#f87171" rx="1"/>
+            <line x1="53" y1="28" x2="53" y2="34" stroke="#f87171" stroke-width="1.5"/>
+        </svg>`,
+    },
 };

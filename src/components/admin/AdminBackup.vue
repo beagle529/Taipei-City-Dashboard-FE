@@ -46,7 +46,8 @@ onMounted(load);
         <div class="bp-header">
             <div>
                 <h4>資料備份</h4>
-                <p>備份包含 chartData/、historyData/、all_components.json、all_dashboards.json</p>
+                <p>備份包含 chartData/、historyData/、all_components.json、all_dashboards.json、all_contributors.json、market_price_history.json、quicklinks.json</p>
+                <p class="backup-location">📁 備份固定位置：<code>backend/data/backups/</code>（每個 zip 內含 RESTORE_INFO.json 還原說明）</p>
             </div>
             <button v-if="isSuper" class="btn-backup" :disabled="creating" @click="createBackup">
                 {{ creating ? "備份中…" : "立即備份" }}
@@ -60,6 +61,7 @@ onMounted(load);
         <div v-else class="backup-list">
             <div class="bl-header">
                 <span>時間</span>
+                <span>版本</span>
                 <span>大小</span>
                 <span>建立者</span>
                 <span>內容</span>
@@ -67,6 +69,7 @@ onMounted(load);
             </div>
             <div v-for="b in backups" :key="b.id" :class="['bl-row', b.exists ? '' : 'missing']">
                 <span class="bl-ts">{{ b.timestamp }}</span>
+                <span class="bl-ver">{{ b.version || '—' }}</span>
                 <span class="bl-size">{{ b.size_kb }} KB</span>
                 <span class="bl-by">{{ b.created_by || '—' }}</span>
                 <span class="bl-files">
@@ -92,7 +95,10 @@ onMounted(load);
 .bp-header {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
     h4 { color: #ddd; margin: 0 0 0.25rem; font-size: 0.9rem; }
-    p { color: #666; font-size: 0.78rem; margin: 0; }
+    p { color: #666; font-size: 0.78rem; margin: 0 0 0.15rem; }
+    .backup-location { color: #4a7be8; font-size: 0.75rem; margin-top: 0.2rem;
+        code { background: #1e2530; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.72rem; }
+    }
 }
 
 .btn-backup {
@@ -111,7 +117,7 @@ onMounted(load);
 
 .bl-header, .bl-row {
     display: grid;
-    grid-template-columns: 160px 70px 90px 1fr 80px;
+    grid-template-columns: 155px 70px 65px 80px 1fr 80px;
     padding: 0.5rem 0.75rem;
     font-size: 0.8rem;
     gap: 0.75rem;
@@ -129,9 +135,10 @@ onMounted(load);
     &.missing { opacity: 0.4; }
 }
 
-.bl-ts { color: #ccc; font-family: monospace; font-size: 0.78rem; }
+.bl-ts  { color: #ccc; font-family: monospace; font-size: 0.78rem; }
+.bl-ver { color: #f59e0b; font-family: monospace; font-size: 0.75rem; font-weight: 600; }
 .bl-size { color: #888; }
-.bl-by { color: #5b8cfa; font-family: monospace; font-size: 0.75rem; }
+.bl-by  { color: #5b8cfa; font-family: monospace; font-size: 0.75rem; }
 
 .bl-files { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .file-chip {

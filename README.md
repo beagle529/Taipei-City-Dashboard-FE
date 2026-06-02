@@ -1,70 +1,269 @@
-# <img src='src/assets/images/TUIC.svg' height='28'>   Taipei City Dashboard Open Source FE
+# 北農儀表板 (Taipei Agricultural Market Dashboard)
 
-## Taipei Codefest 2023
+**版本：2026051201**
 
-Hey! Before you go any further, we would like to invite you to participate in an exciting hackathon event on Nov 18 - 19 this year. 
+本儀表板基於 [Taipei City Dashboard](https://github.com/tpe-doit/Taipei-City-Dashboard-FE) 開源前端框架改作，專為**臺北市農產運銷股份有限公司（北農）**量身定製，整合市場交易數據、蔬果即時行情、食安環境監控、物流管理等多個維度的視覺化分析介面。
 
-<img width="200" alt="Codefest_Black" src="https://github.com/tpe-doit/Taipei-City-Dashboard-FE/assets/13110501/29ebed08-a63d-4fd5-8bd5-e4c423f4e4d4">
+---
 
+## 目錄
 
-Taipei Codefest is hosted by the Taipei City Government to promote and accelerate the open-source effort of Taipei City Dashboard. Contestants will attempt to create more than 4 new components for Taipei City Dashboard in 32 hours. With a top prize of NT$300,000 and unlimited food during the contest, this is definitely an opportunity you wouldn't want to miss. Check out more information on the hackathon's official site: https://codefest.taipei
+1. [系統架構](#系統架構)
+2. [快速啟動](#快速啟動)
+3. [儀表板總覽](#儀表板總覽)
+4. [蔬果即時行情組件](#蔬果即時行情組件)
+5. [後端 API 說明](#後端-api-說明)
+6. [管理後台](#管理後台)
+7. [資料更新方式](#資料更新方式)
+8. [常見問題](#常見問題)
 
-## Introduction
+---
 
-Taipei City Dashboard is a data visualization platform developed by [Taipei Urban Intelligence Center (TUIC)](https://tuic.gov.taipei/en).
+## 系統架構
 
-Our main goal is to create a comprehensive data visualization tool to assist in Taipei City policy decisions. This was achieved through the first version of the Taipei City Dashboard, which displayed a mix of internal and open data, seamlessly blending statistical and geographical data.
-
-Fast forward to mid-2023, as Taipei City’s open data ecosystem matured and expanded, our vision gradually expanded as well. We aimed not only to aid policy decisions but also to keep citizens informed about the important statistics of their city. Given the effectiveness of this tool, we also hoped to publicize the codebase for this project so that any relevant organization could easily create a similar data visualization tool of their own.
-
-Our dashboard, made yours.
-
-Based on the above vision, we decided to begin development on Taipei City Dashboard 2.0. Unlike its predecessor, Taipei City Dashboard 2.0 will be a public platform instead of an internal tool. The codebase for Taipei City Dashboard will also be open-sourced, inviting all interested parties to participate in the development of this platform.
-
-We have since completed the initial layouts and basic functionalities of Taipei City Dashboard 2.0 and feel the time is right to begin sharing the development process with the general public. From now on, you will be able to suggest features and changes to Taipei City Dashboard and develop the platform alongside us. We are excited for you to join Taipei City Dashboard’s journey!
-
-Please refer to the docs for the [Chinese Version](https://tuic.gov.taipei/documentation/front-end/introduction) (and click on the "switch languages" icon in the top right corner).
-
-[Demo](https://tuic.gov.taipei/dashboard-demo) | [License](https://github.com/tpe-doit/Taipei-City-Dashboard-FE/blob/main/LICENSE) | [Code of Conduct](https://github.com/tpe-doit/Taipei-City-Dashboard-FE/blob/main/.github/CODE_OF_CONDUCT.md) | [Contribution Guide](https://tuic.gov.taipei/documentation/front-end/contribution-overview)
-
-## Quick Start
-
-### Docker
-
-1. Install [Docker](https://www.docker.com/products/docker-desktop/) on your computer and start running it.
-2. Fork this repository then clone the project to your computer. Execute `pwd` (mac) or `cd` in the repository terminal to get the complete path.
-3. Execute the following command in the system terminal and replace "<repository path>" with the path you got in step 2.
-
-```bash
-docker run -v <repository path>:/opt/Taipei-City-Dashboard-FE -p 80:80 -it node:18.18.1-alpine3.18  sh
+```
+┌─────────────────────────────┐
+│  前端  Vue 3 + Vite         │  http://localhost:81
+│  (Taipei City Dashboard FE) │
+└────────────┬────────────────┘
+             │ HTTP / REST API
+┌────────────▼────────────────┐
+│  後端  FastAPI (Python)      │  http://localhost:8000
+│  backend/main.py            │
+└────────────┬────────────────┘
+             │ 爬蟲 / CSV 上傳
+┌────────────▼────────────────┐
+│  資料來源                    │
+│  • 北農官網 (tapmc.com.tw)   │
+│  • CSV 上傳 (管理後台)        │
+│  • 靜態 JSON (public/)       │
+└─────────────────────────────┘
 ```
 
-4. Execute the following commands to enter the project folder and install packages.
+---
+
+## 快速啟動
+
+### 前置需求
+
+| 工具 | 版本 |
+|------|------|
+| Node.js | 18+ |
+| Python | 3.11+ |
+| npm | 9+ |
+
+### 1. 安裝前端依賴
 
 ```bash
-cd /opt/Taipei-City-Dashboard-FE
 npm install
 ```
 
-5. You should now be able to locally host this project by executing `npm run dev` in the respository terminal.
-6. Refer to the [Docs](https://tuic.gov.taipei/documentation/front-end/project-setup) to complete further configurations.
+### 2. 啟動前端開發伺服器
 
-### Local Environment
+```bash
+npm run dev
+```
 
-1. Download [Node.js](https://nodejs.org/en) on your computer.
-2. Fork this repository then clone the project to your computer.
-3. Execute `npm install` in the respository terminal
-4. You should now be able to locally host this project by executing `npm run dev` in the respository terminal.
-5. Refer to the [Docs](https://tuic.gov.taipei/documentation/front-end/project-setup) to complete further configurations.
+預設埠：`http://localhost:81`（主倉庫為 80）
 
-## Documentation
+### 3. 啟動後端 API
 
-Check out the complete documentation for Taipei City Dashboard FE [here](https://tuic.gov.taipei/documentation).
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
 
-## Contributors
+後端 API 文件：`http://localhost:8000/docs`
 
-Many thanks to the contributors to this project!
+### 4. 設定後端環境變數
 
-<a href="https://github.com/tpe-doit/Taipei-City-Dashboard-FE/graphs/contributors">
-<img src="https://contrib.rocks/image?repo=tpe-doit/Taipei-City-Dashboard-FE" />
-</a>
+複製範本並填寫：
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+`.env` 中主要設定項：
+
+```
+SECRET_KEY=<your-secret-key>
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=<your-password>
+```
+
+---
+
+## 儀表板總覽
+
+| 儀表板名稱 | 說明 |
+|-----------|------|
+| **交易數據概覽** | 蔬果即時行情、市場日交易量、承銷人進場統計、實名制統計等核心指標 |
+| **物流配送分析** | 運輸路線、車輛調度、配送效率分析 |
+| **市場輿情分析** | 媒體報導與民眾意見監控 |
+| **市場安全管理** | 違規事件記錄、設施維修狀態 |
+| **運輸物流管理** | 車流、路網、運輸設施管理 |
+| **批發市場治理** | 市場運作指標、稽查記錄 |
+| **食安環境監控** | 衛生環境稽查、食安事件追蹤 |
+| **員工社區關係** | 員工福利、社區互動資料 |
+| **市場地圖資訊** | 地圖圖層：市場位置、道路、設施分布 |
+
+---
+
+## 蔬果即時行情組件
+
+**組件 ID：208** ／ 組件名稱：蔬果即時行情
+
+### 功能說明
+
+| 功能 | 說明 |
+|------|------|
+| 即時行情表格 | 顯示品名、品種、上價、中價、下價（元/公斤） |
+| 行情概況 | 當日及昨日蔬菜/水果交易量與平均價 |
+| 搜尋過濾 | 依品名或品種關鍵字即時篩選 |
+| 概況收折 | 點擊 ▲ 按鈕可收合/展開概況區塊 |
+| 立即更新 | 強制重新抓取最新行情（略過快取） |
+| 下載資料 | 支援 JSON 與 CSV 格式下載 |
+| 休市顯示 | 休市日自動顯示休市徽章與說明 |
+
+### 資料來源
+
+- 網址：[https://www.tapmc.com.tw](https://www.tapmc.com.tw)
+- 說明：當日行情為第一市場 7 時統計數據，僅供參考。單位：公噸、元/公斤
+- 快取時間：5 分鐘（300 秒）；點擊「立即更新」可強制刷新
+
+### API 端點
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| GET | `/api/market-price` | 取得行情（有快取） |
+| POST | `/api/market-price/refresh` | 強制重新抓取 |
+| GET | `/api/market-price/debug` | 除錯用：回傳原始 HTML 片段 |
+
+---
+
+## 後端 API 說明
+
+後端使用 **FastAPI**，所有路由均掛載於 `/api` 前綴。
+
+### 主要路由模組
+
+| 模組 | 前綴 | 說明 |
+|------|------|------|
+| `auth.py` | `/api/auth` | 管理員登入 / 登出 / JWT 驗證 |
+| `data.py` | `/api/data` | CSV 上傳、圖表資料讀取 |
+| `components.py` | `/api/components` | 組件 metadata 的讀取與編輯 |
+| `dashboards.py` | `/api/dashboards` | 儀表板清單管理 |
+| `admin_users.py` | `/api/admin` | 管理員帳號管理 |
+| `backup.py` | `/api/backup` | 資料備份與還原 |
+| `audit.py` | `/api/audit` | 操作稽核日誌 |
+| `issues.py` | `/api/issues` | 組件問題回報 |
+| `market_price.py` | `/api/market-price` | 蔬果行情爬蟲 |
+
+### 查看 API 文件
+
+啟動後端後，前往：
+
+```
+http://localhost:8000/docs
+```
+
+---
+
+## 管理後台
+
+前往 `/admin`（需登入）可執行以下操作：
+
+| 功能 | 說明 |
+|------|------|
+| **CSV 上傳** | 上傳各項業務 CSV，自動更新對應組件的圖表資料 |
+| **組件設定** | 編輯組件名稱、資料來源、更新頻率、圖表類型 |
+| **備份管理** | 建立/還原資料快照（存放於 `backend/data/backups/`） |
+| **稽核日誌** | 查看所有管理員操作記錄 |
+| **問題回報** | 查看前端用戶回報的組件問題 |
+
+### CSV 上傳對應表（主要項目）
+
+| 檔案名稱 | 對應組件 |
+|---------|---------|
+| `市場日交易量.csv` | 200 市場日交易量 |
+| `承銷人進場交易人數.csv` | 201 承銷人進場統計 |
+| `一市場實名制統計.csv` | 202 一市場實名制 |
+| `二市場實名制統計.csv` | 203 二市場實名制 |
+| `違規事件記錄.csv` | 違規事件組件 |
+| `衛生環境稽查.csv` | 食安稽查組件 |
+| `設施維修記錄.csv` | 設施維修管理組件 |
+| `設施維修_類別統計.csv` | 維修類別分析 |
+| `設施維修_狀態統計.csv` | 維修狀態追蹤 |
+
+---
+
+## 資料更新方式
+
+### 靜態 JSON（圖表預設資料）
+
+存放於 `public/chartData/<組件ID>.json`，格式：
+
+```json
+{ "data": [ ... ] }
+```
+
+- 組件 208（蔬果行情）：後端即時爬蟲，`public/chartData/208.json` 僅為空佔位檔
+- 其餘組件：透過管理後台 CSV 上傳後，後端自動寫入對應 JSON
+
+### 蔬果行情自動更新
+
+前端 `MarketPriceWidget.vue` 掛載時自動呼叫 `/api/market-price`，並每 **5 分鐘**自動刷新一次。
+
+---
+
+## 常見問題
+
+### Q：蔬果行情組件顯示空白或轉圈圈
+
+1. 確認後端服務是否正常運行（`http://localhost:8000/api/health`）
+2. 確認網路能連上 `tapmc.com.tw`
+3. 點擊「立即更新」強制重新抓取
+
+### Q：CSV 下載內容為空
+
+確認下載前組件已成功載入資料（行情表格有顯示數據），再點擊「組件資訊 → 下載資料」。
+
+### Q：CSV 下載的中文亂碼
+
+本系統 CSV 使用 **UTF-8** 編碼。若以 Excel 開啟出現亂碼，請使用「資料 → 從文字/CSV 匯入」並選擇 UTF-8 編碼，或以 Google 試算表開啟。
+
+### Q：管理後台無法登入
+
+確認 `backend/.env` 中的帳號密碼設定正確，並重新啟動後端伺服器。
+
+### Q：休市時顯示什麼
+
+當日休市時，官網 `tapmc.com.tw` 會顯示休市標示，系統自動偵測並顯示「休市」徽章與說明文字，同時提供歷史行情查詢連結。
+
+---
+
+## 技術版本
+
+| 技術 | 版本 |
+|------|------|
+| Vue | 3.x |
+| Vite | 4.x |
+| Pinia | 2.x |
+| ApexCharts | 3.x |
+| MapLibre GL | 3.x |
+| FastAPI | 0.104 |
+| Python | 3.11 |
+| BeautifulSoup4 | 4.12 |
+
+---
+
+## 版本紀錄
+
+| 版本號 | 日期 | 說明 |
+|--------|------|------|
+| 2026051201 | 2026-05-12 | 初版發布：蔬果即時行情組件、管理後台、CSV 上傳、備份管理、稽核日誌 |
+
+---
+
+*基於 [Taipei City Dashboard FE](https://github.com/tpe-doit/Taipei-City-Dashboard-FE) 開源框架改作。*

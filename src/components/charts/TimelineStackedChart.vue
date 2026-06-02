@@ -2,8 +2,14 @@
 
 <script setup>
 import { ref } from "vue";
+import { fmtAxisVal } from "../../assets/configs/apexcharts/chartUtils.js";
 
 const props = defineProps(["chart_config", "activeChart", "series"]);
+
+const DEFAULT_COLORS = ["#5b8cfa","#4ade80","#f59e0b","#f87171","#a78bfa","#34d399","#fb923c"];
+const resolvedColors = props.chart_config.color?.length
+	? props.chart_config.color
+	: DEFAULT_COLORS;
 
 const chartOptions = ref({
 	chart: {
@@ -15,7 +21,7 @@ const chartOptions = ref({
 			},
 		},
 	},
-	colors: props.chart_config.color,
+	colors: resolvedColors,
 	dataLabels: {
 		enabled: false,
 	},
@@ -72,6 +78,12 @@ const chartOptions = ref({
 			enabled: false,
 		},
 		type: "datetime",
+	},
+	yaxis: {
+		labels: {
+			style: { colors: "#777", fontSize: "11px" },
+			formatter: (val) => fmtAxisVal(val, props.chart_config.unit ?? ""),
+		},
 	},
 });
 

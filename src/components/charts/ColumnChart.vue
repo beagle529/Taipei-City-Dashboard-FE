@@ -2,6 +2,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import { fmtAxisVal } from '../../assets/configs/apexcharts/chartUtils.js';
 import { useMapStore } from '../../store/mapStore';
 
 const props = defineProps(['chart_config', 'activeChart', 'series', 'map_config']);
@@ -57,6 +58,12 @@ const chartOptions = ref({
 			offsetY: 5,
 		},
 		type: 'category',
+	},
+	yaxis: {
+		labels: {
+			style: { colors: "#777", fontSize: "11px" },
+			formatter: (val) => fmtAxisVal(val, props.chart_config.unit ?? ""),
+		},
 	},
 });
 

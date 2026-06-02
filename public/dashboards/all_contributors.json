@@ -1,14 +1,9 @@
 {
 	"data": {
-		"tuic": {
-			"id": "tuic",
-			"name": "臺北大數據中心",
-			"link": "https://tuic.gov.taipei/zh"
-		},
-		"ntueedashboard": {
-			"id": "ntueedashboard",
-			"name": "NTUEE儀表板",
-			"link": "https://github.com/petrus1732/Taipei-City-Dashboard-FE"
+		"tapmc": {
+			"id": "tapmc",
+			"name": "台北農產運銷公司",
+			"link": "https://www.tapmc.com.tw"
 		}
 	}
 }

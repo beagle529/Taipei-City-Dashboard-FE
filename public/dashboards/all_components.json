@@ -2,53 +2,54 @@
 	"data": {
 		"200": {
 			"id": 200,
-			"index": "parity",
-			"history_data": true,
+			"index": "veg_trade_heatmap",
+			"history_data": false,
 			"chart_config": {
 				"types": [
 					"HeatmapChart",
 					"BarPercentChart"
 				],
 				"categories": [
-					"國小畢業",
-					"國中畢業",
-					"高中畢業",
-					"專科畢業",
-					"大學畢業",
-					"碩士畢業",
-					"博士畢業"
+					"蔬菜類",
+					"葉菜類",
+					"根莖類",
+					"果菜類",
+					"水果類",
+					"進口類",
+					"其他類"
 				],
 				"color": [
+					"#113011",
+					"#236e0c",
+					"#236e0c",
+					"#568811",
+					"#568811",
+					"#87a11a",
+					"#87a11a",
 					"#b9b929",
-					"#87a11a",
-					"#87a11a",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#113011"
+					"#b9b929",
+					"#d4d429",
+					"#d4d429",
+					"#e8e87a"
 				],
-				"unit": "生育胎次"
+				"unit": "噸"
 			},
 			"map_config": null,
 			"name": "蔬果交易熱度分析",
 			"source": "業務部",
-			"time_from": "1976-12-31T00:00:00+08:00",
-			"time_to": "2022-12-31T00:00:00+08:00",
+			"time_from": "2023-07-28T00:00:00+08:00",
+			"time_to": null,
+			"update_freq": 1,
+			"update_freq_unit": "month",
 			"short_desc": "顯示各蔬果品項與供應商背景之間的交易熱度關聯",
 			"long_desc": "顯示各蔬果品項與供應商背景之間的交易熱度關聯，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "透過熱度圖掌握不同供應商與蔬果品項的交易熱點，有助於調整採購策略與市場資源分配。",
 			"links": [
-				"https://data.taipei/dataset/detail?id=2917a751-7282-47c9-94ab-58a758a96192"
+				"https://www.tapmc.com.tw"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic",
-				"ntueedashboard"
+				"tapmc"
 			]
 		},
 		"201": {
@@ -56,15 +57,15 @@
 			"index": "unsafety-zone",
 			"chart_config": {
 				"color": [
-					"#9072bc",
-					"#0072bc",
-					"#909220",
-					"#a00000"
+					"#ef4444",
+					"#3b82f6",
+					"#f59e0b",
+					"#22c55e"
 				],
 				"types": [
 					"DistrictPointChart"
 				],
-				"unit": "間",
+				"unit": "處",
 				"map_filter": [
 					"district",
 					[
@@ -83,70 +84,109 @@
 					],
 					"type",
 					[
-						"公立",
-						"私立",
-						"非營利"
+						"消防設施",
+						"AED急救",
+						"危安警示",
+						"緊急出口"
 					]
 				]
 			},
 			"map_config": [
 				{
-					"index": "all_kindergarten",
+					"index": "fire_safety",
 					"property": [
 						{
 							"key": "name",
-							"name": "校園名稱"
+							"name": "設施名稱"
 						},
 						{
 							"key": "type",
 							"name": "類型"
 						},
 						{
-							"key": "telephone",
-							"name": "電話"
+							"key": "location",
+							"name": "位置描述"
 						},
 						{
-							"key": "people",
-							"name": "容量"
+							"key": "inspect_date",
+							"name": "最近檢查日"
 						}
 					],
 					"type": "symbol",
-					"icon": "kindergarten",
-					"title": "幼兒園"
+					"icon": "triangle_white",
+					"title": "消防設施"
 				},
 				{
-					"index": "unsafety_zone",
+					"index": "aed_station",
 					"property": [
 						{
-							"key": "地點位置",
-							"name": "地點位置"
+							"key": "name",
+							"name": "設施名稱"
 						},
 						{
-							"key": "管轄分局",
-							"name": "管轄分局"
+							"key": "location",
+							"name": "位置描述"
+						},
+						{
+							"key": "inspect_date",
+							"name": "最近檢查日"
+						}
+					],
+					"type": "symbol",
+					"icon": "circle_blue",
+					"title": "AED急救設備"
+				},
+				{
+					"index": "hazard_zone",
+					"property": [
+						{
+							"key": "name",
+							"name": "警示區名稱"
+						},
+						{
+							"key": "reason",
+							"name": "危安原因"
+						},
+						{
+							"key": "level",
+							"name": "風險等級"
 						}
 					],
 					"type": "symbol",
 					"icon": "danger_zone",
-					"title": "危險地點"
+					"title": "危安警示區"
+				},
+				{
+					"index": "emergency_exit",
+					"property": [
+						{
+							"key": "name",
+							"name": "出口名稱"
+						},
+						{
+							"key": "location",
+							"name": "位置描述"
+						},
+						{
+							"key": "width",
+							"name": "寬度(m)"
+						}
+					],
+					"type": "symbol",
+					"icon": "exit",
+					"title": "緊急逃生口"
 				}
 			],
 			"name": "市場危安設施分布",
 			"source": "勞工安全衛生室",
-			"time_from": "2014-01-01T00:00:00+08:00",
-			"time_to": "2023-06-30T00:00:00+08:00",
-			"short_desc": "顯示市場內危險區域與緊急設施的點位分布",
-			"long_desc": "顯示市場內危險區域與緊急設施的點位分布，資料來源為台北農產運銷公司，不定期更新。",
-			"use_case": "掌握市場危安設施分布有助於制定緊急應變計畫，確保市場作業人員的安全。",
-			"links": [
-				"https://data.taipei/dataset/detail?id=985743f7-a33e-4ac1-ad2e-7ef5ffea02e2",
-				"https://data.taipei/dataset/detail?id=b01796e2-d9dc-4575-9f39-8c4af0fcde12"
-			],
+			"time_from": "2023-01-01T00:00:00+08:00",
+			"time_to": "2024-12-31T00:00:00+08:00",
+			"short_desc": "顯示批發市場內消防、急救、危安警示及緊急出口的設施點位分布",
+			"long_desc": "整合台北農產運銷公司各批發市場的危安設施資料，包含滅火器、AED急救設備、危安警示區及緊急逃生口的分布與最新檢查狀態，由勞工安全衛生室定期維護。",
+			"use_case": "掌握市場危安設施分布，有助於制定緊急應變計畫，確保市場作業人員與採購人員的安全。",
+			"links": [],
 			"tags": [],
-			"contributors": [
-				"tuic",
-				"ntueedashboard"
-			]
+			"contributors": []
 		},
 		"202": {
 			"id": 202,
@@ -185,13 +225,13 @@
 			"long_desc": "顯示各類蔬菜與水果交易量隨時間的變化趨勢，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "掌握蔬果交易量走勢有助於預測市場供需變化，支援採購與庫存決策。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic",
-				"ntueedashboard"
+				"tapmc",
+				"tapmc"
 			]
 		},
 		"203": {
@@ -255,13 +295,13 @@
 			"long_desc": "顯示大台北各行政區蔬果供貨量的比例分布，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "了解各行政區供貨比例有助於評估各地供應能量，優化物流調度規劃。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic",
-				"ntueedashboard"
+				"tapmc",
+				"tapmc"
 			]
 		},
 		"204": {
@@ -332,13 +372,13 @@
 			"long_desc": "顯示市場冷藏冷凍設施的類型與地點分布，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "掌握冷鏈設施分布有助於確保蔬果品質，並規劃冷藏設備的維護與擴充方案。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic",
-				"ntueedashboard"
+				"tapmc",
+				"tapmc"
 			]
 		},
 		"205": {
@@ -377,13 +417,13 @@
 			"long_desc": "顯示果菜批發市場各類支出項目的比例分布，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "透過支出類別分析可掌握市場營運成本結構，作為預算規劃與成本控管的參考依據。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic",
-				"ntueedashboard"
+				"tapmc",
+				"tapmc"
 			]
 		},
 		"206": {
@@ -422,13 +462,13 @@
 			"long_desc": "顯示市場各區域的容量使用率與空間分布情形，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "市場容量分析有助於了解各區域使用效率，支援場地規劃與攤位配置的優化決策。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic",
-				"ntueedashboard"
+				"tapmc",
+				"tapmc"
 			]
 		},
 		"207": {
@@ -443,9 +483,10 @@
 				],
 				"types": [
 					"ColumnChart",
-					"RadarChart"
+					"RadarChart",
+					"TimelineSeparateChart"
 				],
-				"unit": "人",
+				"unit": "公噸",
 				"categories": [
 					"102年",
 					"103年",
@@ -464,15 +505,67 @@
 			"time_from": "2023-06-02T00:00:00+08:00",
 			"time_to": null,
 			"update_freq": null,
-			"update_freq_unit": null,
+			"update_freq_unit": "",
 			"short_desc": "顯示各類供應商的月均到貨產能統計",
 			"long_desc": "顯示各類供應商的月均到貨產能統計，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "供應商產能統計有助於評估各類供應商的供貨能力，作為訂約與採購規劃的參考依據。",
 			"links": null,
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
+		},
+		"215": {
+			"id": 215,
+			"index": "market-price-history-widget",
+			"history_data": false,
+			"map_config": null,
+			"chart_config": {
+				"types": [
+					"MarketPriceHistoryWidget"
+				],
+				"color": [],
+				"unit": "元/公斤"
+			},
+			"chart_data": [],
+			"name": "蔬果歷史行情",
+			"source": "資訊部",
+			"short_desc": "保存最近7個交易日的蔬果拍賣行情，可依日期查詢各品項上中下價格",
+			"long_desc": "每天早上 8:00 由系統自動抓取台北農產運銷公司官網的蔬果拍賣行情並存檔，完整記錄品名、品種、上價、中價、下價及整體交易量與平均價統計。前端最多顯示最近 7 個有交易日的紀錄，可下載 CSV 或 JSON 格式。",
+			"use_case": "追蹤蔬果行情趨勢、比較不同日期的價格變化，作為採購決策、市場分析與業務報告的歷史依據。",
+			"update_freq": 1,
+			"update_freq_unit": "day",
+			"links": [
+				"https://www.tapmc.com.tw"
+			],
+			"tags": [],
+			"contributors": []
+		},
+		"208": {
+			"id": 208,
+			"index": "market-price-widget",
+			"history_data": false,
+			"map_config": null,
+			"chart_config": {
+				"types": [
+					"MarketPriceWidget"
+				],
+				"color": [],
+				"unit": "元/公斤"
+			},
+			"chart_data": [],
+			"name": "蔬果即時行情",
+			"source": "資訊部",
+			"short_desc": "顯示今日台北農產蔬果拍賣行情及統計摘要，每日早上自動更新",
+			"long_desc": "每天早上 8:00 由排程自動抓取台北農產運銷公司官網的蔬果拍賣行情，包含各品項上價、中價、下價（元/公斤）及蔬果整體交易量與平均價統計。當日資料抓取後即快取，頁面載入時直接讀取，不重複連線官網。如需取得最新數據，可點擊「立即更新」。",
+			"use_case": "掌握今日蔬果批發市場行情，快速查看各品項最高、平均、最低成交價，作為業務決策與即時市場分析的參考依據。",
+			"update_freq": 1,
+			"update_freq_unit": "day",
+			"links": [
+				"https://www.tapmc.com.tw"
+			],
+			"tags": [],
+			"contributors": []
 		},
 		"7": {
 			"id": 7,
@@ -485,7 +578,9 @@
 					"#00A9E0"
 				],
 				"types": [
-					"DonutChart"
+					"StackedColumnChart",
+					"DataTable",
+					"TimelineSeparateChart"
 				],
 				"unit": "件"
 			},
@@ -503,12 +598,12 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"8": {
 			"id": 8,
-			"index": "crimehotspot",
+			"index": "market_violation",
 			"map_config": null,
 			"chart_config": {
 				"color": [
@@ -526,23 +621,19 @@
 			"history_data": true,
 			"source": "勞工安全衛生室",
 			"time_from": "2023-02-01T00:00:00+08:00",
-			"time_to": "2023-08-03T16:07:24+08:00",
-			"update_freq": "1",
-			"update_freq_unit": "day",
+			"time_to": null,
+			"update_freq": 1,
+			"update_freq_unit": "month",
 			"name": "市場違規案件記錄",
 			"short_desc": "顯示近六個月內市場交易違規、竊盜、擾序案件數及點位",
 			"long_desc": "顯示近六個月內市場交易違規、竊盜、擾序案件數及點位，資料來源為台北農產運銷公司，每月更新。",
 			"use_case": "在違規熱區可考慮加強巡查頻率或增設監視設備，並研究違規集中原因以制定改善措施。",
 			"links": [
-				"https://data.taipei/dataset/detail?id=ea2819ff-c869-480e-b7a9-2e5f7906a696",
-				"https://data.taipei/dataset/detail?id=404ca667-bcc4-4f3b-9217-fdcc1da400b2",
-				"https://data.taipei/dataset/detail?id=f87ad53e-79c7-48c4-aec4-f0fd8f99bfb2",
-				"https://data.taipei/dataset/detail?id=3a0e2289-a605-4eac-af30-f4af613f456d",
-				"https://data.taipei/dataset/detail?id=68785231-d6c5-47a1-b001-77eec70bec02"
+				"https://www.tapmc.com.tw"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"9": {
@@ -617,7 +708,7 @@
 			],
 			"source": "勞工安全衛生室",
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場保全人員崗哨與監視設備等安全設施的地理位置，資料來源為台北農產運銷公司，不定期更新。",
@@ -695,7 +786,7 @@
 			"update_freq": null,
 			"update_freq_unit": null,
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場周邊緊急避難設施的地理位置，資料來源為台北農產運銷公司，不定期更新。",
@@ -731,7 +822,7 @@
 			"update_freq": null,
 			"update_freq_unit": null,
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場內火災風險較高的區域標示，資料來源為台北農產運銷公司，不定期更新。",
@@ -802,7 +893,7 @@
 			"update_freq": null,
 			"update_freq_unit": null,
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場內消防栓、滅火器、灑水系統等消防設施的位置，資料來源為台北農產運銷公司，不定期更新。",
@@ -968,7 +1059,7 @@
 			],
 			"source": "管理部",
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場周邊淹水或積水風險較高的區域標示，資料來源為台北農產運銷公司，不定期更新。",
@@ -1057,7 +1148,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"22": {
@@ -1142,7 +1233,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"26": {
@@ -1197,7 +1288,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"28": {
@@ -1315,7 +1406,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"29": {
@@ -1407,7 +1498,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"30": {
@@ -1516,7 +1607,7 @@
 			],
 			"source": "管理部",
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場內目前閒置未使用的設施與場地，資料來源為台北農產運銷公司，不定期更新。",
@@ -1565,17 +1656,17 @@
 					"property": [
 						{
 							"key": "pop_live",
-							"name": "居住推估人數"
+							"name": "市場員工人數"
 						},
 						{
 							"key": "pop_work",
-							"name": "工作推估人數"
+							"name": "每日進場人數"
 						}
 					],
 					"type": "fill-extrusion",
 					"size": null,
 					"icon": null,
-					"title": "居職人口推估"
+					"title": "市場人員分布推估"
 				}
 			],
 			"chart_config": {
@@ -1588,14 +1679,14 @@
 				{
 					"type": "fill-extrusion",
 					"color": "#d76c29",
-					"name": "居住推估人數",
-					"value": 2350032
+					"name": "市場員工人數",
+					"value": 1250
 				},
 				{
 					"type": "fill-extrusion",
 					"color": "#77dddf",
-					"name": "工作推估人數",
-					"value": 2759779
+					"name": "每日進場人數",
+					"value": 8500
 				}
 			],
 			"source": "管理部",
@@ -1605,7 +1696,7 @@
 			"update_freq_unit": null,
 			"name": "市場人員分布推估",
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場各時段人員分布的推估情形，資料來源為台北農產運銷公司，不定期更新。",
@@ -1775,7 +1866,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"34": {
@@ -1938,7 +2029,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"42": {
@@ -2041,7 +2132,7 @@
 			"links": null,
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"43": {
@@ -2133,7 +2224,7 @@
 			"links": null,
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"57": {
@@ -2211,61 +2302,13 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"59": {
 			"id": 59,
-			"index": "water_level",
-			"map_config": [
-				{
-					"index": "patrol_rain_sewer",
-					"paint": {
-						"circle-color": [
-							"interpolate",
-							[
-								"linear"
-							],
-							[
-								"to-number",
-								[
-									"get",
-									"ground_far"
-								]
-							],
-							-100,
-							"#F92623",
-							0.51,
-							"#81bcf5"
-						]
-					},
-					"property": [
-						{
-							"key": "station_no",
-							"name": "NO"
-						},
-						{
-							"key": "station_name",
-							"name": "站名"
-						},
-						{
-							"key": "ground_far",
-							"name": "距地面高[公尺]"
-						},
-						{
-							"key": "level_out",
-							"name": "水位高[公尺]"
-						},
-						{
-							"key": "rec_time",
-							"name": "紀錄時間"
-						}
-					],
-					"type": "circle",
-					"size": "big",
-					"title": "下水道"
-				}
-			],
+			"index": "cold_storage_temp",
+			"map_config": null,
 			"chart_config": {
 				"types": [
 					"GuageChart",
@@ -2276,7 +2319,7 @@
 				],
 				"unit": "站",
 				"categories": [
-					"警戒水位站"
+					"溫度異常站"
 				]
 			},
 			"name": "冷藏設備溫度監測",
@@ -2288,10 +2331,12 @@
 			"short_desc": "顯示當前市場冷藏設備溫度異常的監測站點",
 			"long_desc": "顯示當前市場冷藏設備溫度異常的監測站點，資料來源為台北農產運銷公司，即時更新。",
 			"use_case": "掌握冷藏設備溫度異常情況，可結合其他設備資料深入分析原因，確保蔬果在適當低溫中保存。",
-			"links": null,
+			"links": [
+				"https://www.tapmc.com.tw"
+			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"60": {
@@ -2353,7 +2398,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"61": {
@@ -2463,7 +2508,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"72": {
@@ -2542,7 +2587,7 @@
 			"links": null,
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"73": {
@@ -2657,7 +2702,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"74": {
@@ -2826,7 +2871,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"79": {
@@ -2918,7 +2963,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"82": {
@@ -3017,7 +3062,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"83": {
@@ -3048,7 +3093,7 @@
 			"links": null,
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"90": {
@@ -3112,7 +3157,7 @@
 			"links": null,
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"91": {
@@ -3133,7 +3178,7 @@
 					],
 					"type": "symbol",
 					"icon": "bus",
-					"title": "公車站"
+					"title": "配送集散站點"
 				}
 			],
 			"name": "市場配送集散站",
@@ -3146,7 +3191,7 @@
 				{
 					"type": "symbol",
 					"color": null,
-					"name": "公車站",
+					"name": "配送集散站點",
 					"value": null,
 					"icon": "bus"
 				}
@@ -3157,7 +3202,7 @@
 			"update_freq": null,
 			"update_freq_unit": null,
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場配送車輛的集散站點位置，資料來源為台北農產運銷公司，不定期更新。",
@@ -3189,7 +3234,7 @@
 			"source": "社會局",
 			"time_from": "2023-05-02T08:00:18+08:00",
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "顯示社會福利人口（身障、低收、中低收、低收身障）的比例",
 			"long_desc": "顯示社會福利人口（身障、低收、中低收、低收身障）的比例，資料來源為台北市社會局內部資料，每月15號更新。",
@@ -3270,7 +3315,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"104": {
@@ -3347,7 +3392,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"105": {
@@ -3397,7 +3442,7 @@
 			"update_freq": null,
 			"update_freq_unit": null,
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場內行人步行通道與行走動線的分布，資料來源為台北農產運銷公司，不定期更新。",
@@ -3508,7 +3553,7 @@
 			],
 			"source": "勞工安全衛生室",
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場內醫療急救設施與急救站的位置，資料來源為台北農產運銷公司，不定期更新。",
@@ -3582,7 +3627,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"108": {
@@ -3677,7 +3722,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"109": {
@@ -3711,7 +3756,7 @@
 						}
 					],
 					"type": "line",
-					"title": "自行車道"
+					"title": "物流車道"
 				}
 			],
 			"chart_config": {
@@ -3730,12 +3775,12 @@
 				{
 					"type": "line",
 					"color": "#a0b8e8",
-					"name": "市區自行車道"
+					"name": "主要物流車道"
 				},
 				{
 					"type": "line",
 					"color": "#b7ff98",
-					"name": "河濱自行車道"
+					"name": "次要物流車道"
 				}
 			],
 			"name": "市場物流通道",
@@ -3745,7 +3790,7 @@
 			"update_freq": null,
 			"update_freq_unit": null,
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場內車輛物流通行路線與動線規劃，資料來源為台北農產運銷公司，不定期更新。",
@@ -3919,7 +3964,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"111": {
@@ -4013,7 +4058,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"114": {
@@ -4119,7 +4164,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"115": {
@@ -4191,7 +4236,7 @@
 			"update_freq": null,
 			"update_freq_unit": null,
 			"contributors": [
-				"tuic"
+				"tapmc"
 			],
 			"short_desc": "",
 			"long_desc": "顯示市場建築地基的安全評估結果與風險標示，資料來源為台北農產運銷公司，不定期更新。",
@@ -4286,7 +4331,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"117": {
@@ -4417,7 +4462,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"118": {
@@ -4578,7 +4623,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"140": {
@@ -4612,7 +4657,7 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"141": {
@@ -4753,193 +4798,108 @@
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"142": {
 			"id": 142,
-			"index": "youbike_weekend",
+			"index": "arrival_heatmap_weekend",
 			"chart_config": {
 				"types": [
 					"HeatmapChart"
 				],
 				"categories": [
-					"北投區",
-					"士林區",
-					"內湖區",
-					"南港區",
-					"松山區",
-					"信義區",
-					"中山區",
-					"大同區",
-					"中正區",
-					"萬華區",
-					"大安區",
-					"文山區",
-					"非臺北市"
+					"01時",
+					"02時",
+					"03時",
+					"04時",
+					"05時",
+					"06時",
+					"07時",
+					"08時",
+					"09時",
+					"10時",
+					"11時",
+					"12時",
+					"13時"
 				],
 				"color": [
+					"#113011",
+					"#236e0c",
+					"#568811",
+					"#87a11a",
 					"#b9b929",
-					"#87a11a",
-					"#87a11a",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#666666"
+					"#d4d429",
+					"#e8e87a"
 				],
-				"unit": "千次",
-				"map_filter": [
-					"TOWNNAME_origin",
-					[
-						"北投區",
-						"士林區",
-						"內湖區",
-						"南港區",
-						"松山區",
-						"信義區",
-						"中山區",
-						"大同區",
-						"中正區",
-						"萬華區",
-						"大安區",
-						"文山區",
-						"非臺北市"
-					]
-				]
+				"unit": "件"
 			},
-			"map_config": [
-				{
-					"index": "youbike_weekend",
-					"paint": {
-						"arc-color": [
-							"#fd7900",
-							"#47d3d9"
-						],
-						"arc-width": 3
-					},
-					"type": "arc",
-					"title": "週間群像"
-				}
-			],
+			"map_config": null,
 			"name": "週末到貨熱度分析",
 			"source": "業務部",
 			"time_from": "2023-07-28T00:00:00+08:00",
 			"time_to": null,
+			"update_freq": 1,
+			"update_freq_unit": "week",
 			"short_desc": "顯示週末各時段蔬果到貨量的熱度分布",
-			"long_desc": "顯示週末各時段蔬果到貨量的熱度分布，資料來源為台北農產運銷公司，不定期更新。",
+			"long_desc": "顯示週末各時段蔬果到貨量的熱度分布，資料來源為台北農產運銷公司，每週更新。",
 			"use_case": "透過週末到貨熱度，可掌握供應商的配送習慣與市場作業高峰，有助於週末人力與設備的合理調配。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
-				"https://github.com/tpe-doit/YouBike-Optimization"
+				"https://www.tapmc.com.tw"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"143": {
 			"id": 143,
-			"index": "youbike_weekday",
+			"index": "arrival_heatmap_weekday",
 			"chart_config": {
 				"types": [
 					"HeatmapChart"
 				],
 				"categories": [
-					"北投區",
-					"士林區",
-					"內湖區",
-					"南港區",
-					"松山區",
-					"信義區",
-					"中山區",
-					"大同區",
-					"中正區",
-					"萬華區",
-					"大安區",
-					"文山區"
+					"02時",
+					"03時",
+					"04時",
+					"05時",
+					"06時",
+					"07時",
+					"08時",
+					"09時",
+					"10時",
+					"11時",
+					"12時",
+					"13時"
 				],
 				"color": [
+					"#113011",
+					"#236e0c",
+					"#568811",
+					"#87a11a",
 					"#b9b929",
-					"#87a11a",
-					"#87a11a",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#568811",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#236e0c",
-					"#666666"
+					"#d4d429",
+					"#e8e87a"
 				],
-				"unit": "千次",
-				"map_filter": [
-					"TOWNNAME_origin",
-					[
-						"北投區",
-						"士林區",
-						"內湖區",
-						"南港區",
-						"松山區",
-						"信義區",
-						"中山區",
-						"大同區",
-						"中正區",
-						"萬華區",
-						"大安區",
-						"文山區"
-					]
-				]
+				"unit": "件"
 			},
-			"map_config": [
-				{
-					"index": "youbike_weekday",
-					"paint": {
-						"arc-color": [
-							"#fd7900",
-							"#47d3d9"
-						],
-						"arc-width": 3
-					},
-					"type": "arc",
-					"title": "週間群像"
-				}
-			],
+			"map_config": null,
 			"name": "平日到貨熱度分析",
 			"source": "業務部",
 			"time_from": "2023-07-28T00:00:00+08:00",
 			"time_to": null,
+			"update_freq": 1,
+			"update_freq_unit": "week",
 			"short_desc": "顯示平日各時段蔬果到貨量的熱度分布",
-			"long_desc": "顯示平日各時段蔬果到貨量的熱度分布，資料來源為台北農產運銷公司，不定期更新。",
+			"long_desc": "顯示平日各時段蔬果到貨量的熱度分布，資料來源為台北農產運銷公司，每週更新。",
 			"use_case": "透過平日早高峰到貨熱度，可掌握通勤時段的市場運作狀況，有助於安排配送調度與作業人力。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
-				"https://github.com/tpe-doit/YouBike-Optimization"
+				"https://www.tapmc.com.tw"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"144": {
@@ -5014,12 +4974,12 @@
 			"long_desc": "顯示各配送時段可供調度車輛的見車率統計，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "透過見車率分析掌握缺車嚴重的時段與地點，有助於提前安排補車調度，確保物流順暢運作。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"145": {
@@ -5155,12 +5115,12 @@
 			"long_desc": "顯示各配送路線的互補性與調度建議，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "透過配送路線互補分析，有助於規劃合理的調度區域，優先解決缺車或缺位的路線問題。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"146": {
@@ -5277,12 +5237,12 @@
 			"long_desc": "顯示各區域配送站點的設置與運作狀態，資料來源為台北農產運銷公司，不定期更新。",
 			"use_case": "快速查看各區域配送站點的運作情況，掌握哪些站點正常運作、哪些因設施限制暫停服務。",
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"147": {
@@ -5356,11 +5316,11 @@
 			"use_case": "掌握未覆蓋區域的潛在配送需求，有助於規劃配送網絡的擴展方向，提升整體物流覆蓋率。",
 			"tags": [],
 			"links": [
-				"https://tuic.gov.taipei/youbike",
+				"https://www.tapmc.com.tw",
 				"https://github.com/tpe-doit/YouBike-Optimization"
 			],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
 		},
 		"150": {
@@ -5395,8 +5355,318 @@
 			"links": null,
 			"tags": [],
 			"contributors": [
-				"tuic"
+				"tapmc"
 			]
+		},
+		"209": {
+			"id": 209,
+			"index": "component-209",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"TimelineStackedChart",
+					"TimelineSeparateChart"
+				],
+				"color": [],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "市場日交易量",
+			"source": "資訊部",
+			"short_desc": "批發市場日交易量測試紀錄",
+			"long_desc": "每日（週二～日）交易量、金額、車輛、攤商數",
+			"use_case": "測試使用",
+			"links": [],
+			"tags": [],
+			"contributors": [],
+			"update_freq_unit": ""
+		},
+		"210": {
+			"id": 210,
+			"index": "component-210",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"RealNameTable"
+				],
+				"color": [],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "一市場實名制統計資料",
+			"source": "資訊部",
+			"short_desc": "每日回報批市供應人實名制比率",
+			"long_desc": "每日回報批市供應人實名制比率，以及佔全部供應人的百分比",
+			"use_case": "",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"211": {
+			"id": 211,
+			"index": "component-211",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"RealNameTable"
+				],
+				"color": [],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "二市場實名制統計資料",
+			"source": "資訊部",
+			"short_desc": "每日回報批市供應人實名制比率",
+			"long_desc": "每日回報批市供應人實名制比率，以及佔全部供應人的百分比",
+			"use_case": "",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"213": {
+			"id": 213,
+			"index": "component-213",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"BarChart"
+				],
+				"color": [],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "設施維修_類別統計",
+			"source": "管理部",
+			"short_desc": "設施維修_類別統計",
+			"long_desc": "設施維修_類別統計",
+			"use_case": "",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"214": {
+			"id": 214,
+			"index": "component-214",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"BarChart",
+					"TimelineSeparateChart",
+					"ColumnChart"
+				],
+				"color": [],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "批發市場承銷人進場交易人數統計",
+			"source": "資訊部",
+			"short_desc": "批發市場承銷人進場交易人數統計",
+			"long_desc": "",
+			"use_case": "",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"216": {
+			"id": 216,
+			"index": "component-216",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"BarChart",
+					"DonutChart",
+					"TreemapChart"
+				],
+				"color": [],
+				"unit": "分"
+			},
+			"map_config": null,
+			"name": "衛生環境稽查評分",
+			"source": "衛生稽查組",
+			"time_from": "2026-01-06T00:00:00+08:00",
+			"time_to": null,
+			"update_freq": 1,
+			"update_freq_unit": "week",
+			"short_desc": "各區域衛生稽查平均評分（滿分100分）",
+			"long_desc": "記錄市場各功能區域（蔬菜、水果、根莖類、葉菜類、冷藏區、倉儲區、停車場、辦公區）定期衛生稽查結果，顯示各區近期稽查之平均衛生評分（滿分100分）。稽查項目涵蓋地面清潔、廢棄物處理、病媒防治、攤位整潔及冷藏設備等面向。",
+			"use_case": "快速掌握各區衛生狀況差異，識別長期低分區域，作為加強稽查頻率或要求改善的依據，並追蹤缺失改善成效。",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"217": {
+			"id": 217,
+			"index": "component-217",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"DonutChart"
+				],
+				"color": [
+					"#4ade80",
+					"#60a5fa",
+					"#f59e0b",
+					"#f87171"
+				],
+				"unit": "件"
+			},
+			"map_config": null,
+			"name": "設施維修狀態統計",
+			"source": "管理部",
+			"time_from": "2026-01-01T00:00:00+08:00",
+			"time_to": null,
+			"update_freq": 1,
+			"update_freq_unit": "week",
+			"short_desc": "設施報修案件依完工狀態分類統計",
+			"long_desc": "統計市場設施報修案件依完工狀態（已完工、驗收中、施工中、待發包）的件數分布，提供設施維修整體進度一覽。資料來源為管理部維修管理系統，每週更新。",
+			"use_case": "即時掌握未完工維修項目比例，督促加速處理積案，確保市場設施維持正常運作狀態。",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"218": {
+			"id": 218,
+			"index": "component-218",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"ColumnChart"
+				],
+				"color": [],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "設施維修月報",
+			"source": "管理部",
+			"time_from": "2026-01-01T00:00:00+08:00",
+			"time_to": null,
+			"update_freq": 1,
+			"update_freq_unit": "month",
+			"short_desc": "每月設施報修件數及維修費用趨勢",
+			"long_desc": "彙整市場設施每月報修件數及累計維修費用（萬元），涵蓋資訊設備、清潔設備、冷凍冷藏、給排水、建築結構、車輛設備、電氣設備、消防設備等類別。資料來源為管理部維修紀錄系統，每月更新。",
+			"use_case": "分析各月維修需求量與費用走勢，識別費用異常月份，有助於預算規劃與設備更換週期評估。",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"219": {
+			"id": 219,
+			"index": "component-219",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"BarChart",
+					"DonutChart",
+					"TreemapChart"
+				],
+				"color": [],
+				"unit": "件"
+			},
+			"map_config": null,
+			"name": "違規事件類型統計",
+			"source": "管理部",
+			"time_from": "2026-01-01T00:00:00+08:00",
+			"time_to": null,
+			"update_freq": 1,
+			"update_freq_unit": "week",
+			"short_desc": "市場攤商違規類型件數統計",
+			"long_desc": "統計市場攤商各類違規事件件數，違規類型包含廢棄物未分類、佔用走道、標價不符、衛生不合格、哄抬價格、拒絕檢查、超時營業、擅自轉讓攤位等。每件違規均記錄案號、日期、攤位編號、攤商名稱、違規說明、裁罰金額、處理方式及結案狀態。資料來源為管理部稽查系統，每週更新。",
+			"use_case": "掌握市場違規類型分布，識別高頻違規行為，作為強化宣導、調整稽查策略及決定裁罰標準的依據。",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"220": {
+			"id": 220,
+			"index": "component-220",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"ScatterChart"
+				],
+				"color": [],
+				"unit": "平均價格（（元/公斤）",
+				"categories": [
+					"成交量（公噸）"
+				]
+			},
+			"map_config": null,
+			"name": "品項交易量價散佈分析",
+			"source": "業務部",
+			"short_desc": "各農產品項的日均交易量與平均價格分布圖",
+			"long_desc": "以散佈圖呈現北農各品項之間「交易量」與「平均成交價格」的相對位置，依蔬菜類別（葉菜、果菜、水果）分群顯示。每個圓點代表一種品項，X 軸為日均成交量（公噸），Y 軸為平均價格（元/公斤），可直觀判斷哪些品項屬於高量低價、低量高價或供需失衡的狀態。",
+			"use_case": "適合業務主管快速辨識各品項的市場定位，找出交易量偏低但價格過高的異常品項，或規劃採購策略時比較不同類別農產品的量價分布。",
+			"links": [],
+			"tags": [],
+			"contributors": [],
+			"update_freq_unit": ""
+		},
+		"221": {
+			"id": 221,
+			"index": "component-221",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"CandlestickChart"
+				],
+				"color": [],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "農產品日交易價格 K 線圖",
+			"source": "業務部",
+			"short_desc": "以 K 線（蠟燭圖）呈現每日開高低收四個成交價格",
+			"long_desc": "採用金融市場標準的 K 線圖形式，記錄北農指定農產品（如高麗菜）每個交易日的開盤價、最高價、最低價與收盤價。綠色 K 線表示當日收盤價高於開盤（行情上漲），紅色表示收盤低於開盤（行情下跌），可快速掌握每日价格波動區間與市場強弱。",
+			"use_case": "適合追蹤特定高波動性農產品的短期價格走勢，評估異常價格事件（颱風、產季結束），或作為向下游承銷商說明近期行情的視覺化佐證。",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"222": {
+			"id": 222,
+			"index": "component-222",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"LineColumnChart"
+				],
+				"color": [],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "月成交量與均價趨勢分析",
+			"source": "業務部",
+			"short_desc": "每月成交量（柱）搭配平均單價趨勢（折線）的混合圖表",
+			"long_desc": "結合柱狀圖與折線圖，同時顯示北農每月的成交量（公噸）、進場人次與平均成交價格走勢。柱狀圖反映市場交易規模，折線圖追蹤價格變動趨勢，兩者對比可清楚看出「量大時價格是否下跌」、「淡旺季供需變化」等市場規律。",
+			"use_case": "適合每月例行績效回顧、年度量價趨勢報告，以及觀察特定月份的供應緊俏或市場異常波動，協助業務部調配資源與制定銷售策略。",
+			"links": [],
+			"tags": [],
+			"contributors": []
+		},
+		"223": {
+			"id": 223,
+			"index": "market_floor_plan",
+			"history_data": false,
+			"chart_config": {
+				"types": [
+					"MarketFloorChart"
+				],
+				"categories": [],
+				"color": [
+					"#5b8cfa"
+				],
+				"unit": ""
+			},
+			"map_config": null,
+			"name": "農一期零批場一樓攤位圖",
+			"source": "業務部",
+			"short_desc": "市場各區成交量、進場人數、均價與燈光狀態的互動式平面圖",
+			"long_desc": "以第一果菜市場平面圖為底圖，疊加可互動的區域色彩層。切換「成交量」「進場數」「均價」「燈光狀態」四種指標，顏色深淺反映各區數值高低；燈光狀態模式以綠/黃/紅三色顯示正常、待維修、故障狀態。點擊任一區域可展開甲乙丙等級的明細數據。",
+			"use_case": "適合市場管理人員即時掌握各區現況，快速發現燈光異常或成交量偏低的區塊，作為現場巡查與資源調配的參考依據。",
+			"links": [],
+			"tags": [],
+			"contributors": [],
+			"update_freq_unit": ""
 		}
 	}
 }

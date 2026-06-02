@@ -17,6 +17,8 @@ export const useContentStore = defineStore("content", {
 		dashboards: [],
 		// Stores all components data. Reference the structure in /public/dashboards/all_components.json
 		components: {},
+		// Stores the id of the component to highlight after search navigation
+		highlightComponentId: null,
 		// Picks out the components that are map layers and stores them here
 		mapLayers: [],
 		// Picks out the components that are favorites and stores them here
@@ -154,6 +156,12 @@ export const useContentStore = defineStore("content", {
 					})
 					.catch((e) => {
 						console.error(e);
+						// 若 chart_data 尚未是陣列（null / undefined），
+						// 強制設為空陣列，讓自行取資料的元件（如 MarketPriceWidget）
+						// 能正常渲染，而不是永遠卡在 loading spinner。
+						if (!Array.isArray(this.currentDashboard.content[index].chart_data)) {
+							this.currentDashboard.content[index].chart_data = [];
+						}
 					});
 				if (this.currentDashboard.content[index].history_data) {
 					axios

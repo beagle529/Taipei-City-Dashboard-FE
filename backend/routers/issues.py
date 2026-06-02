@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
 from pathlib import Path
@@ -55,7 +55,6 @@ def update_issue(index: int, resolved: bool, admin=Depends(get_current_admin)):
     data = _load()
     items = data["data"]
     if index < 0 or index >= len(items):
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Not found")
     items[index]["resolved"] = resolved
     _save(data)

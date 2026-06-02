@@ -15,4 +15,10 @@ export const chartTypes = {
 	PolarChart: "極座標圖",
 	PyramidChart: "金字塔圖",
 	SimpleColChart: "並列長條圖",
+	StackedColumnChart: "堆疊直條圖(分組)",
+	DataTable: "資料表格",
+	ScatterChart: "散佈圖",
+	LineColumnChart: "折線柱狀混合圖",
+	CandlestickChart: "K線圖",
+	MarketFloorChart: "市場樓層圖",
 };

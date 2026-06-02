@@ -4,7 +4,7 @@
 <!-- The different modes are controlled by the props "notMoreInfo" (default true) and "isMapLayer" (default false) -->
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watchEffect } from "vue";
 import { useDialogStore } from "../../store/dialogStore";
 import { useContentStore } from "../../store/contentStore";
 
@@ -23,6 +23,44 @@ const props = defineProps({
 
 // The default active chart is the first one in the list defined in the dashboard component
 const activeChart = ref(props.content.chart_config.types[0]);
+
+// ── 搜尋高亮：捲動到此組件並閃爍框線 ─────────────────────────────────
+const containerRef = ref(null);
+const isHighlighted = ref(false);
+
+watchEffect(() => {
+	if (
+		contentStore.highlightComponentId !== null &&
+		String(contentStore.highlightComponentId) === String(props.content.id)
+	) {
+		isHighlighted.value = true;
+		setTimeout(() => {
+			containerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}, 350);
+		setTimeout(() => {
+			isHighlighted.value = false;
+			contentStore.highlightComponentId = null;
+		}, 3500);
+	}
+});
+
+// ── Card size (normal / wide / full) ─────────────────────────────────────────
+// Persisted in localStorage so the preference survives page refresh.
+const SIZE_CYCLE = ["normal", "wide", "full"];
+const LS_KEY = `cc-size-${props.content.id}`;
+const cardSize = ref(localStorage.getItem(LS_KEY) || "normal");
+
+function cycleSize() {
+	const next = SIZE_CYCLE[(SIZE_CYCLE.indexOf(cardSize.value) + 1) % SIZE_CYCLE.length];
+	cardSize.value = next;
+	localStorage.setItem(LS_KEY, next);
+}
+
+const sizeIcon = computed(() => {
+	if (cardSize.value === "wide") return "fullscreen";
+	if (cardSize.value === "full") return "close_fullscreen";
+	return "open_in_full";
+});
 
 // Parses time data into display format
 const dataTime = computed(() => {
@@ -70,10 +108,14 @@ function toggleFavorite() {
 
 <template>
 	<div
+		ref="containerRef"
 		:class="{
 			componentcontainer: true,
 			moreinfostyle: !notMoreInfo,
 			maplayer: isMapLayer,
+			'size-wide': !isMapLayer && notMoreInfo && cardSize === 'wide',
+			'size-full': !isMapLayer && notMoreInfo && cardSize === 'full',
+			'search-highlight': isHighlighted,
 		}"
 	>
 		<div class="componentcontainer-header">
@@ -85,6 +127,14 @@ function toggleFavorite() {
 				<h4>{{ `${content.source} | ${dataTime}` }}</h4>
 			</div>
 			<div v-if="notMoreInfo">
+				<button
+					v-if="!isMapLayer"
+					class="isResize"
+					:title="cardSize === 'normal' ? '放大（雙欄）' : cardSize === 'wide' ? '全寬顯示' : '還原大小'"
+					@click="cycleSize"
+				>
+					<span>{{ sizeIcon }}</span>
+				</button>
 				<button
 					v-if="
 						!isMapLayer &&
@@ -151,7 +201,7 @@ function toggleFavorite() {
 				'componentcontainer-chart': true,
 				'maplayer-chart': isMapLayer,
 			}"
-			v-if="content.chart_data"
+			v-if="Array.isArray(content.chart_data)"
 		>
 			<!-- The components referenced here can be edited in /components/charts -->
 			<component
@@ -225,6 +275,16 @@ function toggleFavorite() {
 </template>
 
 <style scoped lang="scss">
+.search-highlight {
+	animation: search-glow 3.5s ease-out forwards;
+}
+
+@keyframes search-glow {
+	0%   { box-shadow: 0 0 0 3px #5b8cfa, 0 0 16px 4px rgba(91, 140, 250, 0.4); }
+	60%  { box-shadow: 0 0 0 3px #5b8cfa, 0 0 16px 4px rgba(91, 140, 250, 0.4); }
+	100% { box-shadow: 0 0 0 0 transparent; }
+}
+
 .componentcontainer {
 	height: 330px;
 	max-height: 330px;
@@ -337,9 +397,10 @@ function toggleFavorite() {
 
 	&-chart,
 	&-loading {
-		height: 75%;
+		flex: 1;
+		min-height: 0;
 		position: relative;
-		padding-top: 5%;
+		padding-top: 0.4rem;
 		overflow-y: scroll;
 
 		p {
@@ -455,7 +516,45 @@ function toggleFavorite() {
 
 	&-chart,
 	&-loading {
-		height: 60%;
+		flex: 1;
+		min-height: 0;
 	}
 }
+
+/* ── Card resize modes ── */
+.size-wide {
+	grid-column: span 2;
+
+	@media (min-width: 1050px) {
+		height: 420px;
+		max-height: 420px;
+	}
+
+	@media (min-width: 1650px) {
+		height: 460px;
+		max-height: 460px;
+	}
+}
+
+.size-full {
+	grid-column: 1 / -1;
+	height: 560px;
+	max-height: 560px;
+
+	@media (min-width: 1050px) {
+		height: 620px;
+		max-height: 620px;
+	}
+
+	@media (min-width: 1650px) {
+		height: 680px;
+		max-height: 680px;
+	}
+
+	@media (min-width: 2200px) {
+		height: 780px;
+		max-height: 780px;
+	}
+}
+
 </style>

@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue";
 import AdminLogin from "../components/admin/AdminLogin.vue";
 import AdminComponentList from "../components/admin/AdminComponentList.vue";
+import AdminComponentCreate from "../components/admin/AdminComponentCreate.vue";
 import AdminCsvUpload from "../components/admin/AdminCsvUpload.vue";
 import AdminMetaEdit from "../components/admin/AdminMetaEdit.vue";
 import AdminDashboardEdit from "../components/admin/AdminDashboardEdit.vue";
@@ -10,13 +11,15 @@ import AdminUserManage from "../components/admin/AdminUserManage.vue";
 import AdminBackup from "../components/admin/AdminBackup.vue";
 import AdminAuditLog from "../components/admin/AdminAuditLog.vue";
 import AdminIssueLog from "../components/admin/AdminIssueLog.vue";
+import AdminDataSource from "../components/admin/AdminDataSource.vue";
+import AdminQuickLinks from "../components/admin/AdminQuickLinks.vue";
 
 const token = ref(localStorage.getItem("admin_token") || "");
 const isAuthed = ref(false);
 const isSuper = ref(false);
 const currentUser = ref("");
 
-// panel: 'list' | 'csv' | 'meta' | 'dashboards' | 'dash-edit' | 'users' | 'backup' | 'audit'
+// panel: 'list' | 'csv' | 'meta' | 'datasource' | 'create' | 'dashboards' | 'dash-edit' | 'users' | 'backup' | 'audit'
 const panel = ref("list");
 const selectedComponent = ref(null);
 const selectedDashboard = ref(null);
@@ -80,9 +83,19 @@ function openMeta(comp) {
     panel.value = "meta";
 }
 
+function openDataSource(comp) {
+    selectedComponent.value = comp;
+    panel.value = "datasource";
+}
+
 function backToList() {
     panel.value = "list";
     selectedComponent.value = null;
+}
+
+function onComponentCreated() {
+    loadComponents();
+    panel.value = "list";
 }
 
 function openDashboards() { panel.value = "dashboards"; }
@@ -102,7 +115,7 @@ function backToDashboards() { panel.value = "dashboards"; selectedDashboard.valu
             <span class="admin-logo">儀表板管理後台</span>
             <nav class="admin-nav">
                 <button
-                    :class="['nav-btn', panel === 'list' || panel === 'csv' || panel === 'meta' ? 'active' : '']"
+                    :class="['nav-btn', ['list','csv','meta','datasource','create'].includes(panel) ? 'active' : '']"
                     @click="backToList"
                 >組件管理</button>
                 <button
@@ -121,6 +134,10 @@ function backToDashboards() { panel.value = "dashboards"; selectedDashboard.valu
                     :class="['nav-btn', panel === 'audit' ? 'active' : '']"
                     @click="panel = 'audit'"
                 >登入紀錄</button>
+                <button
+                    :class="['nav-btn', panel === 'quicklinks' ? 'active' : '']"
+                    @click="panel = 'quicklinks'"
+                >快速連結</button>
                 <button
                     v-if="isSuper"
                     :class="['nav-btn', panel === 'users' ? 'active' : '']"
@@ -142,11 +159,23 @@ function backToDashboards() { panel.value = "dashboards"; selectedDashboard.valu
                 <div class="panel-head">
                     <h2>組件列表</h2>
                     <p class="panel-desc">點擊「管理」進入 CSV 上傳或資料編輯</p>
+                    <button class="tab new-btn" style="margin-left:auto" @click="panel = 'create'">＋ 新增組件</button>
                 </div>
                 <AdminComponentList
                     :token="token"
                     @select="(c) => openCsv(c)"
                 />
+            </template>
+
+            <!-- Create component -->
+            <template v-else-if="panel === 'create'">
+                <div class="scroll-area">
+                    <AdminComponentCreate
+                        :token="token"
+                        @back="backToList"
+                        @created="onComponentCreated"
+                    />
+                </div>
             </template>
 
             <!-- CSV Upload view -->
@@ -156,6 +185,7 @@ function backToDashboards() { panel.value = "dashboards"; selectedDashboard.valu
                     <div class="panel-tabs">
                         <button class="tab active">CSV 上傳</button>
                         <button class="tab" @click="openMeta(selectedComponent)">編輯資料</button>
+                        <button class="tab" @click="openDataSource(selectedComponent)">定期來源</button>
                     </div>
                 </div>
                 <div class="scroll-area">
@@ -239,6 +269,13 @@ function backToDashboards() { panel.value = "dashboards"; selectedDashboard.valu
                 </div>
             </template>
 
+            <!-- Quick links -->
+            <template v-else-if="panel === 'quicklinks'">
+                <div class="scroll-area">
+                    <AdminQuickLinks :token="token" />
+                </div>
+            </template>
+
             <!-- Meta edit view -->
             <template v-else-if="panel === 'meta'">
                 <div class="panel-head">
@@ -246,6 +283,7 @@ function backToDashboards() { panel.value = "dashboards"; selectedDashboard.valu
                     <div class="panel-tabs">
                         <button class="tab" @click="openCsv(selectedComponent)">CSV 上傳</button>
                         <button class="tab active">編輯資料</button>
+                        <button class="tab" @click="openDataSource(selectedComponent)">定期來源</button>
                     </div>
                 </div>
                 <div class="scroll-area">
@@ -254,6 +292,24 @@ function backToDashboards() { panel.value = "dashboards"; selectedDashboard.valu
                         :component="selectedComponent"
                         @back="backToList"
                         @updated="backToList"
+                    />
+                </div>
+            </template>
+
+            <!-- Datasource (scheduled URL fetch) view -->
+            <template v-else-if="panel === 'datasource'">
+                <div class="panel-head">
+                    <h2>資料更新</h2>
+                    <div class="panel-tabs">
+                        <button class="tab" @click="openCsv(selectedComponent)">CSV 上傳</button>
+                        <button class="tab" @click="openMeta(selectedComponent)">編輯資料</button>
+                        <button class="tab active">定期來源</button>
+                    </div>
+                </div>
+                <div class="scroll-area">
+                    <AdminDataSource
+                        :token="token"
+                        :component="selectedComponent"
                     />
                 </div>
             </template>

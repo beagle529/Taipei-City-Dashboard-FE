@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { CHART_TYPE_DATA } from "./chartTypeData.js";
 
 function chartTypeIcon(name) { return CHART_TYPE_DATA[name]?.icon || ""; }
@@ -27,6 +27,47 @@ const tooltipStyle = computed(() => ({
 
 const props = defineProps(["token", "component"]);
 const emit = defineEmits(["uploaded", "back"]);
+
+// ── 現有資料預覽 ──
+const currentData = ref(null);   // { series: [{name, data:[{x,y}]}], rows: number }
+const currentDataLoading = ref(false);
+
+// 將 series 還原成 CSV 文字（最多顯示 preview_rows 列）
+function seriesToCsvPreview(series, maxRows = 4) {
+    if (!series?.length) return "";
+    const isTimeSeries = series[0]?.data?.[0]?.x?.includes?.("T");
+    const headers = [isTimeSeries ? "日期" : "類別", ...series.map(s => s.name || "值")];
+    const rows = [];
+    const len = Math.min(series[0].data.length, maxRows);
+    for (let i = 0; i < len; i++) {
+        const x = isTimeSeries
+            ? series[0].data[i].x.slice(0, 10)   // 只取日期部分
+            : series[0].data[i].x;
+        rows.push([x, ...series.map(s => s.data[i]?.y ?? "")].join(","));
+    }
+    if (series[0].data.length > maxRows) rows.push("…（共 " + series[0].data.length + " 筆）");
+    return [headers.join(","), ...rows].join("\n");
+}
+
+onMounted(async () => {
+    currentDataLoading.value = true;
+    try {
+        const res = await fetch(`/api/data/${props.component.id}?data_type=chartData`, {
+            headers: { Authorization: `Bearer ${props.token}` },
+        });
+        if (res.ok) {
+            const json = await res.json();
+            const series = json.data || [];
+            currentData.value = {
+                series,
+                rows: series[0]?.data?.length ?? 0,
+                csv: seriesToCsvPreview(series),
+                isTimeSeries: !!(series[0]?.data?.[0]?.x?.includes?.("T")),
+            };
+        }
+    } catch {}
+    currentDataLoading.value = false;
+});
 
 const file = ref(null);
 const preview = ref(null);
@@ -71,6 +112,7 @@ async function loadFile(f) {
     }
     preview.value = data.preview;
     dataType.value = data.data_type;
+    initSelectedChart(data.data_type, data.suggested_chart);
 }
 
 async function confirmUpload() {
@@ -106,6 +148,8 @@ function reset() {
     preview.value = null;
     status.value = null;
     dataType.value = "";
+    selectedChartType.value = "";
+    chartTypeStatus.value = null;
 }
 
 // Summarize series count for preview display
@@ -115,6 +159,44 @@ function previewSummary(data) {
     const totalPts = series.reduce((s, d) => s + (d.data?.length || 0), 0);
     return `${series.length} 個系列，共 ${totalPts} 筆資料點`;
 }
+
+// ── Live chart preview ──
+const selectedChartType = ref("");
+
+// When preview loads, default to first compatible chart type
+// suggestedChart comes from the backend parser (e.g. "ScatterChart", "CandlestickChart")
+function initSelectedChart(detectedType, suggestedChart = "") {
+    const compat = CHART_COMPAT[detectedType];
+    if (!compat) return;
+    const current = props.component?.chart_types || [];
+    // Priority: 1) suggested chart from parser  2) component's existing type  3) first compatible
+    if (suggestedChart && compat.charts.includes(suggestedChart)) {
+        selectedChartType.value = suggestedChart;
+        return;
+    }
+    const matched = current.find(t => compat.charts.includes(t));
+    selectedChartType.value = matched || compat.charts[0] || "";
+}
+
+const previewChartConfig = computed(() => ({
+    color: ["#5b8cfa", "#7ab3ff", "#4ade80", "#f59e0b", "#f87171", "#a78bfa", "#34d399"],
+    unit: "",
+    types: selectedChartType.value ? [selectedChartType.value] : [],
+}));
+
+const previewSeries = computed(() => preview.value?.data || []);
+
+// Chart types available for live preview (excludes map/metro types)
+const PREVIEWABLE = {
+    chartData: [
+        "BarChart", "BarPercentChart", "ColumnChart", "SimpleColChart",
+        "DonutChart", "PolarChart", "TreemapChart", "RadarChart",
+        "HeatmapChart", "PyramidChart", "GuageChart", "RealNameTable",
+        "StackedColumnChart", "DataTable",
+        "ScatterChart", "LineColumnChart", "CandlestickChart",
+    ],
+    historyData: ["TimelineSeparateChart", "TimelineStackedChart", "LineColumnChart"],
+};
 
 const chartTypeUpdating = ref(false);
 const chartTypeStatus = ref(null); // { type, message }
@@ -143,13 +225,17 @@ async function applyChartType(chartType) {
 
 const CHART_COMPAT = {
     historyData: {
-        charts: ["TimelineSeparateChart", "TimelineStackedChart"],
+        charts: ["TimelineSeparateChart", "TimelineStackedChart", "LineColumnChart"],
         hint: "時間序列資料（有日期欄）",
     },
     chartData: {
-        charts: ["BarChart", "BarPercentChart", "ColumnChart", "SimpleColChart",
-                 "DonutChart", "PolarChart", "TreemapChart", "RadarChart",
-                 "HeatmapChart", "PyramidChart", "GuageChart"],
+        charts: [
+            "BarChart", "BarPercentChart", "ColumnChart", "SimpleColChart",
+            "DonutChart", "PolarChart", "TreemapChart", "RadarChart",
+            "HeatmapChart", "PyramidChart", "GuageChart", "RealNameTable",
+            "StackedColumnChart", "DataTable",
+            "ScatterChart", "LineColumnChart", "CandlestickChart",
+        ],
         hint: "類別資料（無日期欄）",
     },
 };
@@ -210,26 +296,49 @@ function compatibility(detectedType) {
             </div>
         </div>
 
-        <!-- CSV Format Guide -->
-        <details class="format-guide">
-            <summary>CSV 格式說明</summary>
-            <div class="format-grid">
-                <div>
-                    <strong>時間趨勢（historyData）</strong>
-                    <pre>date,蔬菜,水果
-2024-01,1250,830
-2024-02,1180,920</pre>
-                    <p>首欄為日期（date / 日期 / time…），其餘欄為系列名稱</p>
+        <!-- CSV Format Guide — 顯示現有資料格式 -->
+        <div class="format-guide">
+            <!-- 有現有資料：顯示實際格式 -->
+            <template v-if="currentData && currentData.rows > 0">
+                <div class="fg-title">
+                    <span>目前資料格式</span>
+                    <span class="fg-badge" :class="currentData.isTimeSeries ? 'badge-time' : 'badge-cat'">
+                        {{ currentData.isTimeSeries ? '時間序列' : '類別資料' }}
+                    </span>
+                    <span class="fg-rows">共 {{ currentData.rows }} 筆 × {{ currentData.series.length }} 系列</span>
                 </div>
-                <div>
-                    <strong>類別比較（chartData）</strong>
-                    <pre>category,value
+                <div class="fg-cols">
+                    <span v-for="s in currentData.series" :key="s.name" class="fg-col-tag">{{ s.name || '（無名稱）' }}</span>
+                </div>
+                <pre class="fg-pre">{{ currentData.csv }}</pre>
+                <p class="fg-hint">上傳新 CSV 時請維持相同的欄位名稱與格式，資料列數不限</p>
+            </template>
+
+            <!-- 尚無資料：顯示通用說明 -->
+            <template v-else-if="!currentDataLoading">
+                <div class="fg-title"><span>CSV 格式說明</span><span class="fg-badge badge-none">尚無資料</span></div>
+                <div class="format-grid">
+                    <div>
+                        <strong>時間序列</strong>
+                        <pre class="fg-pre">日期,系列A,系列B
+2026-01-01,1250,830
+2026-01-02,1180,920</pre>
+                        <p class="fg-hint">首欄為日期，其餘欄為各系列名稱</p>
+                    </div>
+                    <div>
+                        <strong>類別資料</strong>
+                        <pre class="fg-pre">類別,數值
 蔬菜,1250
 水果,830</pre>
-                    <p>或多系列：首欄為類別，其餘欄為各系列數值</p>
+                        <p class="fg-hint">或多系列：首欄為類別，其餘欄為各系列數值</p>
+                    </div>
                 </div>
-            </div>
-        </details>
+            </template>
+
+            <template v-else>
+                <span class="fg-loading">載入現有資料格式中…</span>
+            </template>
+        </div>
 
         <!-- Preview -->
         <div v-if="preview" class="preview-box">
@@ -277,11 +386,39 @@ function compatibility(detectedType) {
                     </div>
                 </div>
             </div>
+
+            <!-- Live chart preview -->
+            <div v-if="PREVIEWABLE[dataType]" class="chart-live-block">
+                <div class="chart-live-header">
+                    <span class="chart-live-title">圖表預覽</span>
+                    <div class="chart-type-tabs">
+                        <button
+                            v-for="t in PREVIEWABLE[dataType]"
+                            :key="t"
+                            :class="['chart-tab', selectedChartType === t ? 'active' : '']"
+                            type="button"
+                            @click="selectedChartType = t"
+                            @mouseenter="showTooltip($event, t)"
+                            @mouseleave="hideTooltip"
+                        >{{ t }}</button>
+                    </div>
+                </div>
+                <div v-if="selectedChartType && previewSeries.length" class="chart-live-canvas">
+                    <component
+                        :is="selectedChartType"
+                        :activeChart="selectedChartType"
+                        :chart_config="previewChartConfig"
+                        :series="previewSeries"
+                        :map_config="null"
+                    />
+                </div>
+                <div v-else class="chart-live-empty">請選擇圖表類型以預覽</div>
+            </div>
         </div>
 
         <!-- Confirm bar — always visible after preview -->
         <div v-if="preview" class="confirm-bar">
-            <p class="confirm-warn">確認後將覆蓋 <strong>{{ dataType }}/{{ component.id }}.json</strong>（原檔自動備份）</p>
+            <p class="confirm-warn">確認後將覆蓋 <strong>chartData/{{ component.id }}.json</strong>（原檔自動備份）</p>
             <button class="btn-confirm" :disabled="uploading" @click="confirmUpload">
                 {{ uploading ? "上傳中..." : "確認上傳" }}
             </button>
@@ -406,28 +543,69 @@ function compatibility(detectedType) {
     padding: 0.75rem 1rem;
     color: #aaa;
     font-size: 0.875rem;
-
-    summary { cursor: pointer; color: #7ab3ff; }
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
+
+.fg-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+    color: #ddd;
+    font-weight: 500;
+}
+
+.fg-badge {
+    font-size: 0.7rem;
+    border-radius: 4px;
+    padding: 0.1rem 0.45rem;
+    font-weight: 500;
+}
+.badge-time { background: #1e2a40; color: #7ab3ff; }
+.badge-cat  { background: #2a3020; color: #4ade80; }
+.badge-none { background: #2e2a1e; color: #f59e0b; }
+
+.fg-rows { color: #666; font-size: 0.75rem; }
+
+.fg-cols {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.fg-col-tag {
+    background: #2a2c2e;
+    color: #ccc;
+    border-radius: 4px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.72rem;
+    font-family: monospace;
+}
+
+.fg-pre {
+    background: #1a1c1e;
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.78rem;
+    color: #aad4ff;
+    margin: 0;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.fg-hint { font-size: 0.78rem; color: #666; margin: 0; }
+.fg-loading { color: #666; font-size: 0.8rem; }
 
 .format-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
-    margin-top: 0.75rem;
-
-    pre {
-        background: #1a1c1e;
-        border-radius: 6px;
-        padding: 0.6rem 0.75rem;
-        font-size: 0.8rem;
-        color: #aad4ff;
-        margin: 0.4rem 0;
-        overflow-x: auto;
-    }
+    margin-top: 0.25rem;
 
     p { font-size: 0.8rem; color: #666; margin: 0; }
-    strong { color: #ddd; display: block; margin-bottom: 0.4rem; }
+    strong { color: #ddd; display: block; margin-bottom: 0.4rem; font-size: 0.82rem; }
 }
 
 .preview-box {
@@ -566,6 +744,67 @@ function compatibility(detectedType) {
 
     &:hover:not(:disabled) { background: #3a4a6a; color: #aad4ff; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+/* ── Live chart preview ── */
+.chart-live-block {
+    margin-top: 1rem;
+    border-top: 1px solid #3a3c3e;
+    padding-top: 0.75rem;
+}
+
+.chart-live-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+}
+
+.chart-live-title {
+    color: #aaa;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.chart-type-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.chart-tab {
+    background: #2a2c2e;
+    border: 1px solid #444;
+    color: #888;
+    border-radius: 4px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.7rem;
+    font-family: monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover { border-color: #5b8cfa; color: #7ab3ff; }
+    &.active { background: #2d3e5a; border-color: #5b8cfa; color: #7ab3ff; }
+}
+
+.chart-live-canvas {
+    height: 280px;
+    background: #111315;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-live-empty {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #444;
+    font-size: 0.8rem;
+    background: #111315;
+    border-radius: 8px;
 }
 
 .chart-type-status {

@@ -1,0 +1,1819 @@
+/**
+ * 臺北農產 51 週年背板 ── 後台控制台
+ * admin.js  |  版本 3.0
+ *
+ * 通訊：localStorage（資料） + BroadcastChannel（即時通知）
+ */
+
+(function () {
+  'use strict';
+
+  /* ════════════════════════════════════════════════
+     IndexedDB 媒體儲存（影片 Blob）
+     ════════════════════════════════════════════════ */
+  const MediaDB = (function () {
+    let _db = null;
+    function open() {
+      if (_db) return Promise.resolve(_db);
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('tapmc_media', 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore('blobs');
+        req.onsuccess  = e => { _db = e.target.result; resolve(_db); };
+        req.onerror    = reject;
+      });
+    }
+    return {
+      put(key, blob) {
+        return open().then(db => new Promise((resolve, reject) => {
+          const tx = db.transaction('blobs', 'readwrite');
+          tx.objectStore('blobs').put(blob, key);
+          tx.oncomplete = resolve;
+          tx.onerror    = reject;
+        }));
+      },
+      get(key) {
+        return open().then(db => new Promise((resolve, reject) => {
+          const req = db.transaction('blobs', 'readonly').objectStore('blobs').get(key);
+          req.onsuccess = e => resolve(e.target.result);
+          req.onerror   = reject;
+        }));
+      },
+      del(key) {
+        return open().then(db => new Promise((resolve, reject) => {
+          const tx = db.transaction('blobs', 'readwrite');
+          tx.objectStore('blobs').delete(key);
+          tx.oncomplete = resolve;
+          tx.onerror    = reject;
+        })).catch(() => {});
+      },
+    };
+  })();
+
+  /* ── BroadcastChannel（與 backdrop.js 同頻道，雙向） ── */
+  let bc = null;
+  try {
+    bc = new BroadcastChannel('tapmc_backdrop');
+    /* 接收背板回傳的序列進度，即時更新清單 */
+    bc.onmessage = e => {
+      if (e.data === 'seq' || (e.data && e.data.type === 'seq')) {
+        /* 序列步驟已推進或結束 → 同步序列步驟（若有夾帶）並重繪清單 */
+        const incoming = e.data && e.data.steps;
+        if (incoming) {
+          seqSteps = incoming;
+          localStorage.setItem('tapmc_seq', JSON.stringify({ steps: seqSteps }));
+        }
+        renderSeqList();
+      }
+      if (e.data === 'tapmc_elements' || e.data === 'elements') {
+        elements = loadElements();
+        renderList();
+      }
+      /* 背板上線 → 送出目錄 handle（讓背板可直接讀取媒體檔案） */
+      if (e.data && e.data.type === 'ready' && FileStore.hasDirectory()) {
+        bc.postMessage({ type: 'fstore_handle', handle: FileStore.getHandle() });
+      }
+    };
+  } catch (_) {}
+
+  function notify(type) {
+    if (bc) bc.postMessage(type);
+    _serverSync(type);   /* 跨電腦：同步至伺服器 */
+  }
+
+  /* 跨電腦通訊：將最新資料寫入伺服器 + 更新版本號
+     背板每 1.5 秒輪詢版本號，偵測到變動後自動取回資料 */
+  function _serverSync(type) {
+    ServerStore.isAvailable().then(ok => {
+      if (!ok) return;
+      let p = null;
+      if (type === 'elements') {
+        p = ServerStore.saveData('tapmc_elements.json', elements);
+      } else if (type === 'text') {
+        const d = JSON.parse(localStorage.getItem('tapmc_text') || 'null');
+        if (d) p = ServerStore.saveData('tapmc_text.json', d);
+      } else if (type === 'ticker') {
+        const d = JSON.parse(localStorage.getItem('tapmc_ticker') || 'null');
+        if (d) p = ServerStore.saveData('tapmc_ticker.json', d);
+      } else if (type === 'badge') {
+        const d = JSON.parse(localStorage.getItem('tapmc_badge') || 'null');
+        if (d) p = ServerStore.saveData('tapmc_badge.json', d);
+      } else if (type === 'title_anim') {
+        p = ServerStore.saveData('tapmc_title_anim.json',
+              { v: localStorage.getItem('tapmc_title_anim') || '1' });
+      } else if (type === 'theme') {
+        const t = localStorage.getItem('tapmc_theme') || 'dark';
+        p = ServerStore.saveData('tapmc_theme.json', { theme: t });
+      } else if (type === 'motif') {
+        p = ServerStore.saveData('tapmc_motif.json',
+              { v: localStorage.getItem('tapmc_motif') || '0' });
+      }
+      /* 資料寫入完成（或不需寫入）→ 更新版本號，讓背板感知到變動 */
+      const bump = () => ServerStore.saveData(
+        'tapmc_version.json', { v: Date.now(), type }).catch(() => {});
+      if (p) p.then(bump).catch(bump);
+      else   bump();
+    }).catch(() => {});
+  }
+
+  /* ════════════════════════════════════════════════
+     資料儲存 UI（File System Access API 或 匯出/匯入備用方案）
+     ════════════════════════════════════════════════ */
+
+  /* ── 共用：更新狀態列 ── */
+  function _updateDirStatus(ok) {
+    const el  = document.getElementById('dir-status');
+    const lbl = document.getElementById('dir-bar-label');
+    if (!el) return;
+    if (ok) {
+      el.textContent = '📂 ' + FileStore.getDirectoryName();
+      el.className   = 'dir-bar__path dir-bar__path--set';
+      if (lbl) lbl.textContent = '工作目錄（自動存檔）';
+    } else {
+      el.textContent = '未設定，點右側「選擇目錄」';
+      el.className   = 'dir-bar__path';
+      if (lbl) lbl.textContent = '工作目錄（自動存檔）';
+    }
+  }
+
+  /* ── 共用：把資料下載為 JSON 檔 ── */
+  function _downloadJSON(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* ── 共用：從 JSON 檔匯入 ── */
+  function _importJSONFile(callback) {
+    const input  = document.createElement('input');
+    input.type   = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { callback(JSON.parse(reader.result)); }
+        catch { showToast('檔案格式錯誤，請選取正確的 JSON 檔', 'warn'); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  const _fsSupported = FileStore.isSupported();
+
+  /* ── 分支 A：支援 File System Access API（Chrome/Edge）── */
+  if (_fsSupported) {
+    const btnPick = document.getElementById('btn-pick-dir');
+    if (btnPick) btnPick.style.display = '';
+
+    btnPick && btnPick.addEventListener('click', async () => {
+      try {
+        await FileStore.pickDirectory();
+        _updateDirStatus(true);
+        FileStore.saveJSON('tapmc_presets.json',   seqPresets).catch(() => {});
+        FileStore.saveJSON('tapmc_seq_steps.json', seqSteps).catch(() => {});
+        showToast('目錄已設定：' + FileStore.getDirectoryName() + ' ✓');
+        if (bc) bc.postMessage({ type: 'fstore_handle', handle: FileStore.getHandle() });
+      } catch (e) {
+        if (e.name !== 'AbortError') showToast('選擇目錄失敗：' + e.message, 'warn');
+      }
+    });
+
+    /* 啟動：嘗試還原上次目錄 */
+    FileStore.restoreHandle().then(async ok => {
+      _updateDirStatus(ok);
+      if (!ok) return;
+      const fPresets = await FileStore.loadJSON('tapmc_presets.json').catch(() => null);
+      if (Array.isArray(fPresets)) {
+        seqPresets = fPresets;
+        try { localStorage.setItem('tapmc_seq_presets', JSON.stringify(seqPresets)); } catch {}
+        renderPresetList();
+      }
+      const fSteps = await FileStore.loadJSON('tapmc_seq_steps.json').catch(() => null);
+      if (Array.isArray(fSteps)) {
+        seqSteps = fSteps;
+        try { localStorage.setItem('tapmc_seq', JSON.stringify({ steps: seqSteps })); } catch {}
+        renderSeqList();
+      }
+      if (bc) bc.postMessage({ type: 'fstore_handle', handle: FileStore.getHandle() });
+    });
+
+  /* ── 分支 B：不支援 API → 顯示 匯出/匯入 按鈕 ── */
+  } else {
+    /* 更新狀態欄說明 */
+    const ds  = document.getElementById('dir-status');
+    const lbl = document.getElementById('dir-bar-label');
+    if (ds)  { ds.textContent = '資料存於瀏覽器（IndexedDB）'; ds.className = 'dir-bar__path dir-bar__path--set'; }
+    if (lbl) lbl.textContent = '本機儲存　·　可匯出備份';
+
+    /* 顯示匯出 / 匯入按鈕 */
+    const btnExp = document.getElementById('btn-export-json');
+    const btnImp = document.getElementById('btn-import-json');
+    if (btnExp) btnExp.style.display = '';
+    if (btnImp) btnImp.style.display = '';
+
+    /* 匯出：下載 tapmc_backup.json（含 presets + steps） */
+    btnExp && btnExp.addEventListener('click', () => {
+      const backup = { presets: seqPresets, steps: seqSteps, exportedAt: new Date().toISOString() };
+      _downloadJSON('tapmc_backup.json', backup);
+      showToast('已下載 tapmc_backup.json ✓');
+    });
+
+    /* 匯入：從 JSON 檔還原 presets + steps */
+    btnImp && btnImp.addEventListener('click', () => {
+      _importJSONFile(data => {
+        let changed = false;
+        if (Array.isArray(data.presets)) {
+          seqPresets = data.presets;
+          try { localStorage.setItem('tapmc_seq_presets', JSON.stringify(seqPresets)); } catch {}
+          renderPresetList();
+          changed = true;
+        }
+        if (Array.isArray(data.steps)) {
+          seqSteps = data.steps;
+          try { localStorage.setItem('tapmc_seq', JSON.stringify({ steps: seqSteps })); } catch {}
+          renderSeqList();
+          changed = true;
+        }
+        if (changed) showToast('已匯入備份資料 ✓');
+        else showToast('找不到可匯入的資料（格式錯誤）', 'warn');
+      });
+    });
+  }
+
+  /* ── 預設文字 ── */
+  const DEFAULTS = {
+    title:    '臺北農產',
+    year:     '115 年度',
+    event:    '股東常會',
+    eyebrow:  '2025 · TAPMC',
+    footnote: 'Annual General Meeting of Shareholders',
+  };
+
+  const TYPE_LABEL = {
+    float: '浮動', 'lower-third': '下方條', announce: '公告框',
+    countdown: '倒數', vip: '歡迎VIP', image: '圖片', video: '影片',
+  };
+
+  /* ── DOM 參照 ── */
+  const elList = document.getElementById('el-list');
+
+  /* ── 狀態 ── */
+  let elements      = loadElements();
+  let selectedColor = 'white';
+
+  /* ════════════════════════════════════════════════
+     連線狀態偵測
+     優先：伺服器連線（跨裝置）；次要：localStorage（同裝置）
+     ════════════════════════════════════════════════ */
+  (function checkStatus() {
+    const dot  = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+
+    dot.className = 'status-dot';   /* 清除舊狀態 */
+
+    /* ── 1. 先偵測同裝置（localStorage 心跳） ── */
+    const lastSeen = localStorage.getItem('tapmc_backdrop_alive');
+    if (lastSeen) {
+      const secs = Math.round((Date.now() - parseInt(lastSeen)) / 1000);
+      if (secs < 30) {
+        dot.classList.add('status-dot--on');
+        text.textContent = '背板已連線（同裝置，' + secs + ' 秒前確認）';
+        setTimeout(checkStatus, 5000);
+        return;
+      }
+    }
+
+    /* ── 2. 再偵測伺服器（跨裝置） ── */
+    ServerStore.isAvailable().then(ok => {
+      dot.className = 'status-dot';
+      if (ok) {
+        dot.classList.add('status-dot--on');
+        text.textContent = '✅ 伺服器已連線，指令透過伺服器同步至背板';
+      } else {
+        dot.classList.add('status-dot--off');
+        text.textContent = '未偵測到背板或伺服器，請確認 index.html 已開啟';
+      }
+    }).catch(() => {
+      dot.className = 'status-dot status-dot--off';
+      text.textContent = '未偵測到背板或伺服器，請確認 index.html 已開啟';
+    });
+
+    setTimeout(checkStatus, 5000);
+  })();
+
+  /* ════════════════════════════════════════════════
+     分頁切換
+     ════════════════════════════════════════════════ */
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('pane--active'));
+      tab.classList.add('tab--active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('pane--active');
+    });
+  });
+
+  /* ════════════════════════════════════════════════
+     Tab：歡迎長官
+     ════════════════════════════════════════════════ */
+  let roster  = JSON.parse(localStorage.getItem('tapmc_vip_roster')  || '[]');
+  let history = JSON.parse(localStorage.getItem('tapmc_vip_history') || '[]');
+
+  function showVip(name) {
+    if (!name) { showToast('請輸入姓名職稱', 'warn'); return; }
+
+    const durSecs  = parseInt(document.getElementById('vip-duration').value);
+    const vipStyle = document.getElementById('vip-style').value;
+
+    const el = {
+      id:           Date.now(),
+      type:         vipStyle,
+      content:      vipStyle === 'vip' ? name : '歡迎 ' + name + ' 蒞臨',
+      size:         vipStyle === 'vip' ? 0 : 36,
+      /* lower-third 背景為深色，文字必須用 white，
+         gradient 類別會讓文字透明導致看不見          */
+      color:        vipStyle === 'vip' ? 'gradient' : 'white',
+      position:     'center',
+      visible:      true,
+      autoDismiss:  durSecs,
+      countdownSecs: 0,
+      fromVip:      true,   /* 標記來自 VIP 歡迎，供緊急下架使用 */
+    };
+
+    elements.push(el);
+    saveElements();
+    notify('elements');
+    renderList();
+
+    history.unshift({ name, time: Date.now(), style: vipStyle, dur: durSecs });
+    if (history.length > 50) history.pop();
+    localStorage.setItem('tapmc_vip_history', JSON.stringify(history));
+    renderHistory();
+
+    showToast('歡迎畫面已送出 ✓');
+  }
+
+  document.getElementById('btn-vip').addEventListener('click', () => {
+    const name = document.getElementById('vip-name').value.trim();
+    showVip(name);
+    document.getElementById('vip-name').value = '';
+  });
+
+  document.getElementById('vip-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-vip').click();
+  });
+
+  /* 名單管理 */
+  function renderRoster() {
+    const list = document.getElementById('vip-roster-list');
+    if (!roster.length) {
+      list.innerHTML = '<p class="empty" style="font-size:11px;">點右上角 ✏️ 新增名單</p>';
+      return;
+    }
+    list.innerHTML = '';
+    roster.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'vip-chip';
+      btn.innerHTML = `<span class="vip-chip__name">${name}</span><span class="vip-chip__go">▶</span>`;
+      btn.addEventListener('click', () => showVip(name));
+      list.appendChild(btn);
+    });
+  }
+
+  const rosterEdit = document.getElementById('vip-roster-edit');
+  document.getElementById('btn-toggle-roster-edit').addEventListener('click', () => {
+    const isOpen = rosterEdit.style.display !== 'none';
+    if (isOpen) {
+      rosterEdit.style.display = 'none';
+    } else {
+      document.getElementById('vip-roster-input').value = roster.join('\n');
+      rosterEdit.style.display = 'flex';
+    }
+  });
+
+  document.getElementById('btn-cancel-roster').addEventListener('click', () => {
+    rosterEdit.style.display = 'none';
+  });
+
+  document.getElementById('btn-save-roster').addEventListener('click', () => {
+    const raw = document.getElementById('vip-roster-input').value;
+    roster = raw.split('\n').map(s => s.trim()).filter(Boolean);
+    localStorage.setItem('tapmc_vip_roster', JSON.stringify(roster));
+    rosterEdit.style.display = 'none';
+    renderRoster();
+    showToast('名單已儲存 ✓');
+  });
+
+  function renderHistory() {
+    const list = document.getElementById('vip-history-list');
+    if (!history.length) {
+      list.innerHTML = '<p class="empty" style="font-size:11px;">尚無紀錄</p>';
+      return;
+    }
+    list.innerHTML = '';
+    history.forEach(h => {
+      const d    = new Date(h.time);
+      const hhmm = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+      const dur  = h.dur > 0 ? h.dur + '秒' : '不消失';
+      const div  = document.createElement('div');
+      div.className = 'vip-log-item';
+      div.innerHTML = `<span class="vip-log-item__name">${h.name}</span>
+                       <span class="vip-log-item__time">${hhmm}　${dur}</span>`;
+      list.appendChild(div);
+    });
+  }
+
+  document.getElementById('btn-clear-history').addEventListener('click', () => {
+    history = [];
+    localStorage.setItem('tapmc_vip_history', JSON.stringify(history));
+    renderHistory();
+    showToast('呈現紀錄已清除');
+  });
+
+  /* ── 緊急下架：移除目前所有來自 VIP 歡迎的元素 ── */
+  document.getElementById('btn-vip-dismiss').addEventListener('click', () => {
+    /* 若連續播放中，一併停止 */
+    stopVipQueue(false);
+
+    const before = elements.length;
+    elements = elements.filter(el => !el.fromVip);
+    if (elements.length < before) {
+      saveElements();
+      notify('elements');
+      showToast('歡迎畫面已下架 ✓');
+    } else {
+      showToast('目前沒有正在顯示的歡迎畫面', 'warn');
+    }
+  });
+
+  /* ── 連續播放全部名單 ── */
+  let _vipQueueTimer = null;
+  let _vipQueueIdx   = 0;
+  let _vipQueueOn    = false;
+
+  function _updatePlayAllBtn() {
+    const btn = document.getElementById('btn-vip-play-all');
+    if (!btn) return;
+    if (_vipQueueOn) {
+      btn.textContent      = '■ 停止連續播放';
+      btn.style.background = 'rgba(230,0,92,0.25)';
+      btn.style.border     = '1px solid rgba(230,0,92,0.60)';
+      btn.style.color      = '#ff6b9d';
+    } else {
+      btn.textContent      = '▶▶  連續播放全部名單';
+      btn.style.background = '';
+      btn.style.border     = '';
+      btn.style.color      = '';
+    }
+  }
+
+  function stopVipQueue(showMsg) {
+    clearTimeout(_vipQueueTimer);
+    _vipQueueTimer = null;
+    _vipQueueIdx   = 0;
+    _vipQueueOn    = false;
+    _updatePlayAllBtn();
+    if (showMsg !== false) showToast('已停止連續播放');
+  }
+
+  function _playQueueNext() {
+    if (_vipQueueIdx >= roster.length) {
+      /* 全部播完 */
+      stopVipQueue(false);
+      showToast('名單播放完畢 ✓');
+      return;
+    }
+    const name    = roster[_vipQueueIdx];
+    const durSecs = parseInt(document.getElementById('vip-duration').value) || 10;
+    showVip(name);
+    _vipQueueIdx++;
+
+    if (_vipQueueIdx < roster.length) {
+      /* 等目前這位消失後再顯示下一位（額外加 0.5 秒過渡緩衝） */
+      _vipQueueTimer = setTimeout(_playQueueNext, (durSecs + 0.5) * 1000);
+    } else {
+      /* 最後一位：等它消失後結束 */
+      _vipQueueTimer = setTimeout(() => {
+        stopVipQueue(false);
+        showToast('名單播放完畢 ✓');
+      }, (durSecs + 0.5) * 1000);
+    }
+  }
+
+  document.getElementById('btn-vip-play-all').addEventListener('click', () => {
+    if (_vipQueueOn) {
+      stopVipQueue();
+      return;
+    }
+    if (!roster.length) {
+      showToast('名單是空的，請先編輯名單', 'warn');
+      return;
+    }
+    _vipQueueIdx = 0;
+    _vipQueueOn  = true;
+    _updatePlayAllBtn();
+    showToast('開始連續播放，共 ' + roster.length + ' 位 ▶▶');
+    _playQueueNext();
+  });
+
+  renderRoster();
+  renderHistory();
+
+  /* ════════════════════════════════════════════════
+     Tab：文字設定 ── 左上角識別區（Logo + 角標）
+     ════════════════════════════════════════════════ */
+
+  /* ── Logo 上傳 ── */
+  (function initLogoUpload() {
+    /* 還原儲存的 Logo 預覽 */
+    const saved = localStorage.getItem('tapmc_logo_src');
+    if (saved) document.getElementById('logo-preview').src = saved;
+
+    document.getElementById('logo-file-input').addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const dataUrl = e.target.result;
+
+        /* 更新預覽 */
+        document.getElementById('logo-preview').src = dataUrl;
+
+        /* 儲存：localStorage（即時） + IndexedDB（備份） */
+        try {
+          localStorage.setItem('tapmc_logo_src', dataUrl);
+        } catch (_) {
+          /* localStorage 空間不足（大圖）→ 只存 IndexedDB */
+        }
+        MediaDB.put('tapmc_logo', file).catch(() => {});
+
+        /* 伺服器備份 */
+        ServerStore.isAvailable().then(ok => {
+          if (ok) ServerStore.saveImage('logo_custom', dataUrl).catch(() => {});
+        }).catch(() => {});
+
+        notify('logo');
+        showToast('Logo 已更新並套用至背板 ✓');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('btn-reset-logo').addEventListener('click', () => {
+      localStorage.removeItem('tapmc_logo_src');
+      MediaDB.del('tapmc_logo').catch(() => {});
+      document.getElementById('logo-preview').src = 'assets/logo-beinong-market.png';
+      notify('logo');
+      showToast('Logo 已還原為預設 ✓');
+    });
+  })();
+
+  /* ── 角標（51th）── */
+  (function initBadge() {
+    const saved = JSON.parse(localStorage.getItem('tapmc_badge') || 'null');
+    if (saved) {
+      document.getElementById('cfg-badge-num').value = saved.num || '51';
+      document.getElementById('cfg-badge-sup').value = saved.sup || 'th';
+    }
+
+    document.getElementById('btn-apply-badge').addEventListener('click', () => {
+      const data = {
+        num: document.getElementById('cfg-badge-num').value.trim() || '51',
+        sup: document.getElementById('cfg-badge-sup').value.trim() || 'th',
+      };
+      localStorage.setItem('tapmc_badge', JSON.stringify(data));
+      notify('badge');
+      showToast('角標已套用 ✓');
+    });
+
+    document.getElementById('btn-reset-badge').addEventListener('click', () => {
+      localStorage.removeItem('tapmc_badge');
+      document.getElementById('cfg-badge-num').value = '51';
+      document.getElementById('cfg-badge-sup').value = 'th';
+      notify('badge');
+      showToast('角標已還原為 51th ✓');
+    });
+  })();
+
+  /* ════════════════════════════════════════════════
+     Tab：文字設定
+     ════════════════════════════════════════════════ */
+  (function restoreTextInputs() {
+    const saved = JSON.parse(localStorage.getItem('tapmc_text') || 'null');
+    if (!saved) return;
+    document.getElementById('cfg-title').value    = saved.title    || DEFAULTS.title;
+    document.getElementById('cfg-year').value     = saved.year     || DEFAULTS.year;
+    document.getElementById('cfg-event').value    = saved.event    || DEFAULTS.event;
+    document.getElementById('cfg-eyebrow').value  = saved.eyebrow  || DEFAULTS.eyebrow;
+    document.getElementById('cfg-footnote').value = saved.footnote || DEFAULTS.footnote;
+  })();
+
+  document.getElementById('btn-apply-text').addEventListener('click', () => {
+    const data = {
+      title:    document.getElementById('cfg-title').value.trim()    || DEFAULTS.title,
+      year:     document.getElementById('cfg-year').value.trim()     || DEFAULTS.year,
+      event:    document.getElementById('cfg-event').value.trim()    || DEFAULTS.event,
+      eyebrow:  document.getElementById('cfg-eyebrow').value.trim()  || DEFAULTS.eyebrow,
+      footnote: document.getElementById('cfg-footnote').value.trim() || DEFAULTS.footnote,
+    };
+    localStorage.setItem('tapmc_text', JSON.stringify(data));
+    notify('text');
+    showToast('文字已套用至背板 ✓');
+  });
+
+  document.getElementById('btn-reset-text').addEventListener('click', () => {
+    localStorage.removeItem('tapmc_text');
+    document.getElementById('cfg-title').value    = DEFAULTS.title;
+    document.getElementById('cfg-year').value     = DEFAULTS.year;
+    document.getElementById('cfg-event').value    = DEFAULTS.event;
+    document.getElementById('cfg-eyebrow').value  = DEFAULTS.eyebrow;
+    document.getElementById('cfg-footnote').value = DEFAULTS.footnote;
+    localStorage.setItem('tapmc_text', JSON.stringify(DEFAULTS));
+    notify('text');
+    showToast('已還原預設文字 ✓');
+  });
+
+  /* ── 主標題色彩動畫（多款樣式） ── */
+  const ANIM_STYLE_NAMES = {
+    '0': '關閉', '1': '彩虹流動', '2': '金光閃耀', '3': '紅金輝煌', '4': '極光波動'
+  };
+  (function initTitleAnimToggle() {
+    function _setActive(val) {
+      document.querySelectorAll('.title-anim-btn').forEach(b => {
+        b.classList.toggle('theme-btn--active', b.dataset.anim === val);
+      });
+    }
+
+    const saved = localStorage.getItem('tapmc_title_anim') || '1';
+    _setActive(saved);
+
+    document.querySelectorAll('.title-anim-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.anim;
+        localStorage.setItem('tapmc_title_anim', val);
+        _setActive(val);
+        notify('title_anim');
+        showToast('動畫：' + (ANIM_STYLE_NAMES[val] || val) + ' ✓');
+      });
+    });
+  })();
+
+  /* ════════════════════════════════════════════════
+     跑馬燈
+     ════════════════════════════════════════════════ */
+  const DEFAULT_TICKER = [
+    '臺北農產運銷股份有限公司',
+    '創立於民國 63 年',
+    '經營理念：誠信・服務・創新・效率',
+    '服務農民・穩定供需・守護餐桌',
+    'Taipei Agricultural Products Marketing Corporation',
+  ];
+
+  (function restoreTickerInput() {
+    const saved = JSON.parse(localStorage.getItem('tapmc_ticker') || 'null');
+    const items = saved && saved.length ? saved : DEFAULT_TICKER;
+    document.getElementById('cfg-ticker').value = items.join('\n');
+  })();
+
+  document.getElementById('btn-apply-ticker').addEventListener('click', () => {
+    const raw   = document.getElementById('cfg-ticker').value;
+    const items = raw.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!items.length) { showToast('請至少輸入一則內容', 'warn'); return; }
+    localStorage.setItem('tapmc_ticker', JSON.stringify(items));
+    notify('ticker');
+    showToast('跑馬燈已套用 ✓');
+  });
+
+  document.getElementById('btn-reset-ticker').addEventListener('click', () => {
+    localStorage.setItem('tapmc_ticker', JSON.stringify(DEFAULT_TICKER));
+    document.getElementById('cfg-ticker').value = DEFAULT_TICKER.join('\n');
+    notify('ticker');
+    showToast('跑馬燈已還原預設 ✓');
+  });
+
+  /* ════════════════════════════════════════════════
+     Tab：新增元素
+     ════════════════════════════════════════════════ */
+
+  /* 顏色選擇器 */
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    if (btn.dataset.seqColor) return;  /* 序列顏色器另外處理 */
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.color-btn:not([data-seq-color])').forEach(b => b.classList.remove('color-btn--active'));
+      btn.classList.add('color-btn--active');
+      selectedColor = btn.dataset.color;
+    });
+  });
+
+  /* 類型切換 */
+  const newTypeEl     = document.getElementById('new-type');
+  const addTextGroup  = document.getElementById('add-text-group');
+  const addImageGroup = document.getElementById('add-image-group');
+  const addVideoGroup = document.getElementById('add-video-group');
+  const addColorGroup = document.getElementById('add-color-group');
+  const sizeValEl     = document.getElementById('size-val');
+  const sizeUnitEl    = document.getElementById('size-unit');
+  const sizeInput     = document.getElementById('new-size');
+
+  function onTypeChange() {
+    const t = newTypeEl.value;
+    const isImage = t === 'image';
+    const isVideo = t === 'video';
+    const isMedia = isImage || isVideo;
+
+    addTextGroup  && (addTextGroup.style.display  = isMedia ? 'none'  : 'block');
+    addImageGroup && (addImageGroup.style.display = isImage ? 'flex'  : 'none');
+    addVideoGroup && (addVideoGroup.style.display = isVideo ? 'flex'  : 'none');
+    addColorGroup && (addColorGroup.style.display = isMedia ? 'none'  : 'block');
+
+    if (isMedia) {
+      if (sizeUnitEl) sizeUnitEl.textContent = 'vw';
+      if (sizeInput)  { sizeInput.min = '10'; sizeInput.max = '80'; sizeInput.value = '60'; }
+      if (sizeValEl)  sizeValEl.textContent = '60';
+    } else {
+      if (sizeUnitEl) sizeUnitEl.textContent = 'px';
+      if (sizeInput)  { sizeInput.min = '16'; sizeInput.max = '120'; sizeInput.value = '40'; }
+      if (sizeValEl)  sizeValEl.textContent = '40';
+    }
+  }
+
+  newTypeEl && newTypeEl.addEventListener('change', onTypeChange);
+
+  /* ── 圖片壓縮（Canvas API → JPEG base64） ── */
+  let _pendingImageSlides  = [];   /* [{dataUrl, name}, ...] */
+  let _imgFullscreen       = false;
+  let _imgSplit            = false;  /* 左右並列模式 */
+
+  /* ── 判斷是否為 TIF/TIFF（需要伺服器端轉換） ── */
+  function _isTiff(file) {
+    const ext  = (file.name.split('.').pop() || '').toLowerCase();
+    const mime = (file.type || '').toLowerCase();
+    return mime === 'image/tiff' || ext === 'tif' || ext === 'tiff';
+  }
+
+  /* ── 伺服器端 TIF → JPEG 轉換（使用 Pillow） ── */
+  function _convertTiffViaServer(file, callback) {
+    /* 先確認伺服器是否可達，再送 TIF；避免在離線時浪費 2s timeout */
+    ServerStore.isAvailable().then(ok => {
+      if (!ok) { callback(null); return; }
+      /* 與 ServerStore 共用相同的 BASE（已由 TAPMC_API_BASE 或相對路徑決定） */
+      const BASE = (typeof window !== 'undefined' && window.TAPMC_API_BASE)
+                    ? window.TAPMC_API_BASE : '';
+      const form = new FormData();
+      form.append('file', file);
+      fetch(BASE + '/api/tapmc/convert-image', {
+        method: 'POST',
+        body: form,
+        headers: { 'ngrok-skip-browser-warning': 'tapmc' },
+      })
+        .then(r => {
+          if (!r.ok) return r.json().then(j => { throw new Error(j.detail || r.status); });
+          return r.json();
+        })
+        .then(j => callback(j.dataUrl, j.width, j.height))
+        .catch(err => {
+          console.error('[convertTiff]', err);
+          callback(null);
+        });
+    });
+  }
+
+  /* ── 圖片壓縮（Canvas API → JPEG base64，適用瀏覽器可解碼的格式） ── */
+  function compressImage(file, callback) {
+    /* TIF/TIFF → 改走伺服器轉換，不進 Canvas */
+    if (_isTiff(file)) {
+      _convertTiffViaServer(file, callback);
+      return;
+    }
+    const MAX_W = 1920, MAX_H = 1080, QUALITY = 0.85;
+    const reader = new FileReader();
+    reader.onload = function (re) {
+      const original = re.target.result;
+      const imgEl    = new Image();
+      /* onerror：瀏覽器無法解碼（不支援格式）→ 以 null 回呼 */
+      imgEl.onerror = function () { callback(null); };
+      imgEl.onload = function () {
+        let w = imgEl.width, h = imgEl.height;
+        if (w > MAX_W || h > MAX_H) {
+          const ratio = Math.min(MAX_W / w, MAX_H / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width  = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', QUALITY);
+        callback(dataUrl, w, h, original.length, dataUrl.length);
+      };
+      imgEl.src = original;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ── 圖片檔案選取（支援多張輪播） ── */
+  const fileInput   = document.getElementById('new-image-file');
+  const uploadLabel = document.getElementById('img-upload-label');
+  const uploadText  = document.getElementById('img-upload-text');
+  const slidesList  = document.getElementById('img-slides-list');
+  const intervalRow = document.getElementById('img-interval-row');
+  const fsBtn       = document.getElementById('btn-img-fullscreen');
+
+  function _renderSlidesList() {
+    if (!slidesList) return;
+    slidesList.innerHTML = '';
+    _pendingImageSlides.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'slide-thumb-row';
+      row.innerHTML = `<img src="${s.dataUrl}" /><span class="slide-thumb-row__name">${i+1}. ${s.name}</span>`;
+      const del = document.createElement('button');
+      del.className = 'slide-thumb-row__del';
+      del.textContent = '✕';
+      del.onclick = () => {
+        _pendingImageSlides.splice(i, 1);
+        _renderSlidesList();
+        _updateImgUI();
+      };
+      row.appendChild(del);
+      slidesList.appendChild(row);
+    });
+    slidesList.style.display = _pendingImageSlides.length ? 'flex' : 'none';
+    if (intervalRow) intervalRow.style.display = _pendingImageSlides.length > 1 ? 'flex' : 'none';
+  }
+
+  function _updateImgUI() {
+    const n = _pendingImageSlides.length;
+    if (uploadText) uploadText.textContent = n ? `✅　已選 ${n} 張` : '📂　點擊選取圖片（可多選）';
+    if (n) uploadLabel && uploadLabel.classList.add('img-upload-btn--loaded');
+    else   uploadLabel && uploadLabel.classList.remove('img-upload-btn--loaded');
+  }
+
+  fileInput && fileInput.addEventListener('change', function () {
+    const files = Array.from(this.files);
+    if (!files.length) return;
+
+    /* TIF 檔提示走伺服器轉換（需要 Server 上線） */
+    const tiffFiles = files.filter(_isTiff);
+    if (tiffFiles.length) {
+      ServerStore.isAvailable().then(ok => {
+        if (!ok) showToast('TIF 轉換需要伺服器連線，請確認伺服器已啟動', 'warn');
+      });
+    }
+
+    uploadText && (uploadText.textContent = '⏳　壓縮中…');
+    let done = 0;
+    files.forEach(file => {
+      if (!_isTiff(file) && file.size > 5 * 1024 * 1024)
+        showToast(file.name + ' 超過 5 MB', 'warn');
+      compressImage(file, function (dataUrl) {
+        if (dataUrl) {
+          _pendingImageSlides.push({ dataUrl, name: file.name });
+        } else {
+          showToast(file.name + ' 無法轉換，請確認伺服器已啟動或改用 JPG/PNG', 'warn');
+        }
+        done++;
+        if (done === files.length) {
+          _renderSlidesList();
+          _updateImgUI();
+        }
+      });
+    });
+    this.value = '';   /* 允許再次選同一張 */
+  });
+
+  /* 全螢幕開關 */
+  fsBtn && fsBtn.addEventListener('click', () => {
+    _imgFullscreen = !_imgFullscreen;
+    if (_imgFullscreen) _imgSplit = false;   /* 互斥 */
+    fsBtn.textContent = _imgFullscreen ? '● 開啟' : '○ 關閉';
+    fsBtn.style.background  = _imgFullscreen ? 'rgba(34,197,94,0.25)' : '';
+    fsBtn.style.borderColor = _imgFullscreen ? 'rgba(34,197,94,0.6)'  : '';
+    const sp = document.getElementById('btn-img-split');
+    if (sp) { sp.textContent = '○ 關閉'; sp.style.background = ''; sp.style.borderColor = ''; }
+  });
+
+  /* 並列開關 */
+  const splitBtn = document.getElementById('btn-img-split');
+  splitBtn && splitBtn.addEventListener('click', () => {
+    _imgSplit = !_imgSplit;
+    if (_imgSplit) _imgFullscreen = false;   /* 互斥 */
+    splitBtn.textContent = _imgSplit ? '● 開啟' : '○ 關閉';
+    splitBtn.style.background  = _imgSplit ? 'rgba(0,160,233,0.25)' : '';
+    splitBtn.style.borderColor = _imgSplit ? 'rgba(0,160,233,0.6)'  : '';
+    if (fsBtn) { fsBtn.textContent = '○ 關閉'; fsBtn.style.background = ''; fsBtn.style.borderColor = ''; }
+    /* 並列模式提示 */
+    if (_imgSplit) showToast('並列模式：每次輪播顯示 2 張並排');
+  });
+
+  function _resetImageForm() {
+    _pendingImageSlides = [];
+    _imgFullscreen = false;
+    _imgSplit = false;
+    if (fileInput)    fileInput.value = '';
+    if (uploadText)   uploadText.textContent = '📂　點擊選取圖片（可多選）';
+    if (uploadLabel)  uploadLabel.classList.remove('img-upload-btn--loaded');
+    if (slidesList)   { slidesList.innerHTML = ''; slidesList.style.display = 'none'; }
+    if (intervalRow)  intervalRow.style.display = 'none';
+    if (fsBtn)        { fsBtn.textContent = '○ 關閉'; fsBtn.style.background = ''; fsBtn.style.borderColor = ''; }
+    if (splitBtn)     { splitBtn.textContent = '○ 關閉'; splitBtn.style.background = ''; splitBtn.style.borderColor = ''; }
+  }
+
+  /* ── 影片檔案選取 ── */
+  let _pendingVideoBlob = null;
+
+  const vidFileInput   = document.getElementById('new-video-file');
+  const vidUploadLabel = document.getElementById('vid-upload-label');
+  const vidUploadText  = document.getElementById('vid-upload-text');
+  const vidPreviewWrap = document.getElementById('vid-preview-wrap');
+  const vidInfoEl      = document.getElementById('vid-info');
+
+  vidFileInput && vidFileInput.addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    if (file.size > 200 * 1024 * 1024) showToast('影片超過 200 MB，可能導致瀏覽器記憶體不足', 'warn');
+    _pendingVideoBlob = file;
+    vidUploadText  && (vidUploadText.textContent = '✅　' + file.name);
+    vidUploadLabel && vidUploadLabel.classList.add('img-upload-btn--loaded');
+    if (vidPreviewWrap) vidPreviewWrap.style.display = 'block';
+    if (vidInfoEl) vidInfoEl.textContent = `影片　${(file.size / 1024 / 1024).toFixed(1)} MB`;
+  });
+
+  /* ── 新增元素按鈕 ── */
+  document.getElementById('btn-add-el').addEventListener('click', () => {
+    const type        = newTypeEl.value;
+    const position    = document.getElementById('new-position').value;
+    const autoDismiss = parseInt(document.getElementById('new-duration').value) || 0;
+    const size        = parseInt(sizeInput ? sizeInput.value : 40);
+
+    /* 圖片（支援多張輪播） */
+    if (type === 'image') {
+      if (!_pendingImageSlides.length) { showToast('請先選取圖片', 'warn'); return; }
+      const baseId   = Date.now();
+      const interval = parseInt(document.getElementById('img-interval')?.value || '5') || 5;
+      const slideIds = [];
+
+      _pendingImageSlides.forEach((s, i) => {
+        const imgId = baseId + i;
+        slideIds.push('__img__' + imgId);
+        ServerStore.saveImage(imgId, s.dataUrl).catch(() => {});
+        MediaDB.put('img_' + imgId, s.dataUrl).catch(() => {});
+        FileStore.saveImage(imgId, s.dataUrl).catch(() => {});
+        try { localStorage.setItem('tapmc_img_' + imgId, s.dataUrl); } catch {}
+      });
+
+      const el = {
+        id: baseId, type: 'image',
+        content:    slideIds[0],           /* 相容舊版：單張時使用 */
+        slides:     slideIds,              /* 多張輪播 */
+        interval:   interval,
+        fullscreen: _imgFullscreen,
+        layout:     _imgSplit ? 'split' : 'single',
+        size, color: 'none',
+        position, visible: true, countdownSecs: 0, autoDismiss,
+      };
+      elements.push(el); saveElements(); notify('elements'); renderList();
+      _resetImageForm();
+      showToast(_pendingImageSlides.length > 1 ? `${slideIds.length} 張圖片已送出 ✓` : '圖片已送出至背板 ✓');
+      return;
+    }
+
+    /* 影片 */
+    if (type === 'video') {
+      if (!_pendingVideoBlob) { showToast('請先選取影片', 'warn'); return; }
+      const id        = Date.now();
+      const vidBlob   = _pendingVideoBlob;
+      const vidName   = vidFileInput?.files[0]?.name || 'video.mp4';
+      /* 1. 伺服器（最高優先，跨電腦共用） */
+      ServerStore.saveVideo(id, vidBlob, vidName).catch(() => {});
+      /* 2. 寫入磁碟（FileStore，Chrome/Edge 選用） */
+      FileStore.saveVideo(id, vidBlob, vidName).catch(() => {});
+      /* 3. 同時寫入 IndexedDB（本機備援，供背板即時讀取） */
+      MediaDB.put('vid_' + id, vidBlob).then(() => {
+        const el = { id, type: 'video', content: '__vid__' + id, size, color: 'none',
+                     position, visible: true, countdownSecs: 0, autoDismiss };
+        elements.push(el); saveElements(); notify('elements'); renderList();
+        _pendingVideoBlob = null;
+        if (vidFileInput)    vidFileInput.value = '';
+        if (vidUploadText)   vidUploadText.textContent = '🎬　點擊選取影片';
+        if (vidUploadLabel)  vidUploadLabel.classList.remove('img-upload-btn--loaded');
+        if (vidPreviewWrap)  vidPreviewWrap.style.display = 'none';
+        showToast('影片已送出至背板 ✓');
+      }).catch(() => showToast('影片儲存失敗', 'warn'));
+      return;
+    }
+
+    /* 文字 / 其他 */
+    const content = document.getElementById('new-content').value.trim();
+    if (!content) { showToast('請輸入內容文字', 'warn'); return; }
+    let countdownSecs = 0;
+    if (type === 'countdown') countdownSecs = parseInt(content) || 60;
+    const el = {
+      id: Date.now(), type,
+      content: type === 'countdown' ? String(countdownSecs) : content,
+      size, color: selectedColor, position, visible: true, countdownSecs, autoDismiss,
+    };
+    elements.push(el); saveElements(); notify('elements'); renderList();
+    document.getElementById('new-content').value = '';
+    showToast('元素已新增至背板 ✓');
+  });
+
+  /* ════════════════════════════════════════════════
+     Tab：元素管理
+     ════════════════════════════════════════════════ */
+  document.getElementById('btn-clear-all').addEventListener('click', () => {
+    elements.forEach(el => {
+      if (el.type === 'video' && el.content && el.content.startsWith('__vid__')) {
+        const vid = el.content.slice(7);
+        MediaDB.del('vid_' + vid);
+        FileStore.deleteVideo(vid).catch(() => {});
+        ServerStore.deleteVideo(vid).catch(() => {});
+      }
+      if (el.type === 'image' && el.content && el.content.startsWith('__img__')) {
+        const imgId = el.content.slice(7);
+        MediaDB.del('img_' + imgId);
+        localStorage.removeItem('tapmc_img_' + imgId);
+        FileStore.deleteImage(imgId).catch(() => {});
+        ServerStore.deleteImage(imgId).catch(() => {});
+      }
+    });
+    elements = []; saveElements(); notify('elements'); renderList();
+    showToast('已清除全部元素');
+  });
+
+  /* ════════════════════════════════════════════════
+     渲染元素列表
+     ════════════════════════════════════════════════ */
+  function renderList() {
+    if (elements.length === 0) {
+      elList.innerHTML = '<p class="empty">尚未新增任何元素</p>';
+      return;
+    }
+    elList.innerHTML = '';
+    elements.forEach(el => {
+      const item = document.createElement('div');
+      item.className = 'el-item';
+      const labelText = el.type === 'video' ? '🎬 影片' :
+                        el.type === 'image' ? '🖼 圖片' :
+                        el.content.replace(/\n/g, ' ');
+      item.innerHTML = `
+        <span class="el-item__label" title="${labelText}">${labelText}</span>
+        <span class="el-item__type">${TYPE_LABEL[el.type] || el.type}</span>
+        <button class="el-btn el-btn--vis" title="${el.visible ? '隱藏' : '顯示'}">
+          ${el.visible ? '👁' : '🙈'}
+        </button>
+        <button class="el-btn el-btn--del" title="刪除">✕</button>
+      `;
+
+      item.querySelector('.el-btn--vis').addEventListener('click', () => {
+        el.visible = !el.visible;
+        saveElements(); notify('elements'); renderList();
+      });
+
+      item.querySelector('.el-btn--del').addEventListener('click', () => {
+        if (el.type === 'video' && el.content && el.content.startsWith('__vid__')) {
+          const vid = el.content.slice(7);
+          MediaDB.del('vid_' + vid);
+          FileStore.deleteVideo(vid).catch(() => {});
+          ServerStore.deleteVideo(vid).catch(() => {});
+        }
+        if (el.type === 'image' && el.content && el.content.startsWith('__img__')) {
+          const imgId = el.content.slice(7);
+          MediaDB.del('img_' + imgId);
+          localStorage.removeItem('tapmc_img_' + imgId);
+          FileStore.deleteImage(imgId).catch(() => {});
+          ServerStore.deleteImage(imgId).catch(() => {});
+        }
+        elements = elements.filter(e => e.id !== el.id);
+        saveElements(); notify('elements'); renderList();
+      });
+
+      elList.appendChild(item);
+    });
+  }
+
+  /* ════════════════════════════════════════════════
+     Tab：序列設定
+     ════════════════════════════════════════════════ */
+  let seqSteps        = (JSON.parse(localStorage.getItem('tapmc_seq') || 'null') || {}).steps || [];
+  let seqSelectedColor = 'white';
+  let _seqPendingMedia = null;   /* {blob/dataUrl, type:'video'|'image', name} */
+  let _seqEditingIdx   = -1;     /* -1=新增模式，>=0=編輯第 N 個步驟 */
+
+  /* 序列步驟列表渲染 */
+  function renderSeqList() {
+    const list  = document.getElementById('seq-step-list');
+    const state = JSON.parse(localStorage.getItem('tapmc_seq_state') || 'null');
+    const curIdx = (state && state.running) ? state.currentStep : -1;
+    const hint   = document.getElementById('seq-status-hint');
+
+    if (hint) {
+      if (state && state.running && curIdx >= 0) {
+        hint.textContent = `▶ 執行中 ── 步驟 ${curIdx + 1} / ${seqSteps.length}`;
+        hint.style.color = 'rgba(34,197,94,0.85)';
+      } else if (state && !state.running && state.currentStep === -1 && state.seqId) {
+        hint.textContent = '✅ 序列播放完畢';
+        hint.style.color = 'rgba(0,160,233,0.85)';
+      } else {
+        hint.textContent = '尚未執行';
+        hint.style.color = '';
+      }
+    }
+
+    if (!seqSteps.length) {
+      list.innerHTML = '<p class="empty">尚未設定步驟，請在下方新增</p>';
+      return;
+    }
+    list.innerHTML = '';
+    seqSteps.forEach((step, i) => {
+      const item = document.createElement('div');
+      item.className = 'seq-step' + (i === curIdx ? ' seq-step--active' : '');
+
+      const typeLabel = TYPE_LABEL[step.type] || step.type;
+      let preview = '';
+      if (step.type === 'countdown') preview = step.countdownSecs + ' 秒倒數';
+      else if (step.type === 'video') preview = '🎬 影片';
+      else if (step.type === 'image') preview = '🖼 圖片';
+      else preview = (step.content || '').slice(0, 24);
+
+      const durText = step.autoDismiss > 0 ? step.autoDismiss + '秒' : '播完結束';
+
+      item.innerHTML = `
+        <span class="seq-step__num">${i + 1}</span>
+        <span class="seq-step__label" title="${preview}">${preview}</span>
+        <span class="seq-step__type">${typeLabel}</span>
+        <span class="hint" style="font-size:10px;flex-shrink:0;">${durText}</span>
+        <button class="el-btn" data-edit="${i}" title="編輯" style="color:#7dd3fc;">✏</button>
+        <button class="el-btn" data-up="${i}"   title="上移">↑</button>
+        <button class="el-btn" data-dn="${i}"   title="下移">↓</button>
+        <button class="el-btn el-btn--del" data-rm="${i}" title="刪除">✕</button>
+      `;
+
+      item.querySelector('[data-edit]').addEventListener('click', () => enterSeqEditMode(i));
+
+      item.querySelector('[data-up]').addEventListener('click', () => {
+        if (i === 0) return;
+        [seqSteps[i-1], seqSteps[i]] = [seqSteps[i], seqSteps[i-1]];
+        saveSeq(); renderSeqList();
+      });
+      item.querySelector('[data-dn]').addEventListener('click', () => {
+        if (i === seqSteps.length - 1) return;
+        [seqSteps[i], seqSteps[i+1]] = [seqSteps[i+1], seqSteps[i]];
+        saveSeq(); renderSeqList();
+      });
+      item.querySelector('[data-rm]').addEventListener('click', () => {
+        const s = seqSteps[i];
+        if (s.content && s.content.startsWith('__vid__') && !_mediaInPreset(s.content)) {
+          const vid = s.content.slice(7);
+          MediaDB.del('vid_' + vid);
+          FileStore.deleteVideo(vid).catch(() => {});
+          ServerStore.deleteVideo(vid).catch(() => {});
+        }
+        if (s.content && s.content.startsWith('__img__') && !_mediaInPreset(s.content)) {
+          const imgId = s.content.slice(7);
+          MediaDB.del('img_' + imgId);
+          localStorage.removeItem('tapmc_img_' + imgId);
+          FileStore.deleteImage(imgId).catch(() => {});
+          ServerStore.deleteImage(imgId).catch(() => {});
+        }
+        seqSteps.splice(i, 1);
+        saveSeq(); renderSeqList();
+      });
+
+      list.appendChild(item);
+    });
+  }
+
+  function saveSeq() {
+    localStorage.setItem('tapmc_seq', JSON.stringify({ steps: seqSteps }));
+    ServerStore.saveData('tapmc_seq_steps.json', seqSteps).catch(() => {});
+    FileStore.saveJSON('tapmc_seq_steps.json', seqSteps).catch(() => {});
+  }
+
+  /* ════════════════════════════════════════════════
+     序列清單（Presets）管理
+     儲存格式：tapmc_seq_presets = [{id, name, steps, savedAt}, ...]
+     ════════════════════════════════════════════════ */
+  let seqPresets = JSON.parse(localStorage.getItem('tapmc_seq_presets') || '[]');
+
+  function savePresets() {
+    try {
+      localStorage.setItem('tapmc_seq_presets', JSON.stringify(seqPresets));
+    } catch (e) {
+      showToast('儲存失敗：瀏覽器儲存空間不足', 'warn');
+      console.error('[savePresets] 寫入失敗', e);
+    }
+    ServerStore.saveData('tapmc_presets.json', seqPresets).catch(() => {});
+    FileStore.saveJSON('tapmc_presets.json', seqPresets).catch(() => {});
+  }
+
+  function renderPresetList() {
+    /* 每次都從 localStorage 重新讀取，確保顯示資料與磁碟同步 */
+    seqPresets = JSON.parse(localStorage.getItem('tapmc_seq_presets') || '[]');
+    const list = document.getElementById('seq-preset-list');
+    if (!seqPresets.length) {
+      list.innerHTML = '<p class="empty" style="font-size:11px;">尚未儲存任何序列</p>';
+      return;
+    }
+    list.innerHTML = '';
+    seqPresets.forEach((preset, i) => {
+      const item = document.createElement('div');
+      item.className = 'seq-preset-item';
+
+      const d     = new Date(preset.savedAt || 0);
+      const dateStr = d.getFullYear() ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}` : '';
+      const countText = `${preset.steps.length} 步驟`;
+
+      item.innerHTML = `
+        <span class="seq-preset-item__name" title="${preset.name}">${preset.name}</span>
+        <span class="seq-preset-item__count">${countText}</span>
+        <span class="hint" style="font-size:10px;flex-shrink:0;">${dateStr}</span>
+        <button class="btn btn--load" data-load="${i}">載入</button>
+        <button class="el-btn el-btn--del" data-del="${i}" title="刪除">✕</button>
+      `;
+
+      /* 載入清單 → 取代目前步驟 */
+      item.querySelector('[data-load]').addEventListener('click', () => {
+        /* confirm() 在平板/ngrok 下會被封鎖，直接執行 */
+        seqSteps = JSON.parse(JSON.stringify(preset.steps));  /* deep copy */
+        saveSeq();
+        renderSeqList();
+        exitSeqEditMode();
+        showToast(`已載入「${preset.name}」✓`);
+      });
+
+      /* 刪除清單 */
+      item.querySelector('[data-del]').addEventListener('click', () => {
+        /* 直接刪除，不彈 confirm */
+        seqPresets.splice(i, 1);
+        savePresets();
+        renderPresetList();
+        showToast('清單已刪除');
+      });
+
+      list.appendChild(item);
+    });
+  }
+
+  /* ── 另存目前序列為新清單 ── */
+  const seqSaveForm    = document.getElementById('seq-save-form');
+  const seqSaveNameEl  = document.getElementById('seq-save-name');
+
+  document.getElementById('btn-seq-save-as').addEventListener('click', () => {
+    if (!seqSteps.length) { showToast('目前序列沒有步驟可儲存', 'warn'); return; }
+    seqSaveForm.style.display = 'flex';
+    seqSaveNameEl.value = '';
+    seqSaveNameEl.focus();
+  });
+
+  document.getElementById('btn-seq-save-cancel').addEventListener('click', () => {
+    seqSaveForm.style.display = 'none';
+  });
+
+  seqSaveNameEl && seqSaveNameEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-seq-save-confirm').click();
+    if (e.key === 'Escape') document.getElementById('btn-seq-save-cancel').click();
+  });
+
+  document.getElementById('btn-seq-save-confirm').addEventListener('click', () => {
+    const name = seqSaveNameEl.value.trim();
+    if (!name) { showToast('請輸入清單名稱', 'warn'); seqSaveNameEl.focus(); return; }
+
+    /* 同名則更新，否則新增 */
+    const existing = seqPresets.findIndex(p => p.name === name);
+    const preset   = { id: Date.now(), name, steps: JSON.parse(JSON.stringify(seqSteps)), savedAt: Date.now() };
+    if (existing >= 0) {
+      /* 直接覆蓋，不彈 confirm */
+      seqPresets[existing] = preset;
+    } else {
+      seqPresets.unshift(preset);          /* 最新的放最上面 */
+    }
+    savePresets();
+    renderPresetList();
+    seqSaveForm.style.display = 'none';
+    showToast(`已儲存「${name}」✓`);
+  });
+
+  /* 初始渲染 */
+  renderPresetList();
+
+  /* ── 進入編輯模式：以第 idx 步驟填充表單 ── */
+  function enterSeqEditMode(idx) {
+    const step = seqSteps[idx];
+    if (!step) return;
+    _seqEditingIdx = idx;
+
+    /* 設定類型 */
+    if (seqTypeEl) { seqTypeEl.value = step.type; onSeqTypeChange(); }
+
+    /* 填入內容 */
+    if (step.type !== 'video' && step.type !== 'image') {
+      const cEl = document.getElementById('seq-content');
+      if (cEl) cEl.value = step.type === 'countdown'
+        ? String(step.countdownSecs || parseInt(step.content) || 60)
+        : (step.content || '');
+    } else {
+      /* 媒體：提示保留原有，重新選取才替換 */
+      const text  = document.getElementById('seq-media-text');
+      const label = document.getElementById('seq-media-label');
+      if (text)  text.textContent = '📎 保留原有媒體（重新選取即替換）';
+      if (label) label.classList.add('img-upload-btn--loaded');
+    }
+
+    /* 大小 */
+    const szEl  = document.getElementById('seq-size');
+    const szVal = document.getElementById('seq-size-val');
+    if (szEl)  szEl.value = step.size || 60;
+    if (szVal) szVal.textContent = step.size || 60;
+
+    /* 顏色 */
+    if (step.color) {
+      document.querySelectorAll('[data-seq-color]').forEach(b => {
+        b.classList.toggle('color-btn--active', b.dataset.seqColor === step.color);
+      });
+      seqSelectedColor = step.color;
+    }
+
+    /* 位置 */
+    const posEl = document.getElementById('seq-position');
+    if (posEl) posEl.value = step.position || 'center';
+
+    /* 持續秒數 */
+    const durEl = document.getElementById('seq-dur');
+    if (durEl) durEl.value = step.type === 'countdown'
+      ? (step.countdownSecs || 0)
+      : (step.autoDismiss || 0);
+
+    /* 切換按鈕樣式 */
+    const addBtn = document.getElementById('btn-seq-add');
+    if (addBtn) {
+      addBtn.textContent = '✅ 儲存修改';
+      addBtn.style.background   = 'var(--color-orange)';
+      addBtn.style.borderColor  = 'var(--color-orange)';
+    }
+
+    _showSeqCancelBtn(true);
+
+    /* 捲動到表單 */
+    const card = document.getElementById('btn-seq-add');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  /* ── 離開編輯模式，重設表單 ── */
+  function exitSeqEditMode() {
+    _seqEditingIdx = -1;
+    resetSeqMediaInput();
+
+    const cEl = document.getElementById('seq-content');
+    if (cEl) cEl.value = '';
+
+    const durEl = document.getElementById('seq-dur');
+    if (durEl) durEl.value = '10';
+
+    const addBtn = document.getElementById('btn-seq-add');
+    if (addBtn) {
+      addBtn.textContent    = '＋ 加入序列';
+      addBtn.style.background  = '';
+      addBtn.style.borderColor = '';
+    }
+
+    _showSeqCancelBtn(false);
+  }
+
+  /* ── 取消按鈕動態插入/顯示切換 ── */
+  function _showSeqCancelBtn(show) {
+    let btn = document.getElementById('btn-seq-edit-cancel');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'btn-seq-edit-cancel';
+      btn.className = 'btn';
+      btn.style.cssText = 'width:100%;margin-top:4px;display:none;';
+      btn.textContent = '╳ 取消修改';
+      const addBtn = document.getElementById('btn-seq-add');
+      addBtn && addBtn.parentNode.insertBefore(btn, addBtn.nextSibling);
+      btn.addEventListener('click', exitSeqEditMode);
+    }
+    btn.style.display = show ? 'block' : 'none';
+  }
+
+  /* 序列類型切換 */
+  const seqTypeEl = document.getElementById('seq-type');
+  function onSeqTypeChange() {
+    const t = seqTypeEl ? seqTypeEl.value : 'countdown';
+    const isMedia = t === 'video' || t === 'image';
+    const isText  = !isMedia;
+    document.getElementById('seq-text-group').style.display  = isText  ? 'block' : 'none';
+    document.getElementById('seq-media-group').style.display = isMedia ? 'flex'  : 'none';
+    document.getElementById('seq-color-group').style.display = isText  ? 'block' : 'none';
+    const unitEl = document.getElementById('seq-size-unit');
+    if (unitEl) unitEl.textContent = isMedia ? 'vw' : 'px';
+    if (t === 'video') {
+      document.getElementById('seq-media-file').accept = 'video/*';
+      document.getElementById('seq-media-text').textContent = '🎬 選取影片檔案';
+    } else if (t === 'image') {
+      document.getElementById('seq-media-file').accept = 'image/*';
+      document.getElementById('seq-media-text').textContent = '📂 選取圖片';
+    }
+  }
+  seqTypeEl && seqTypeEl.addEventListener('change', onSeqTypeChange);
+  onSeqTypeChange();   /* 初始狀態 */
+
+  /* 序列媒體上傳 */
+  document.getElementById('seq-media-file').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const isVideo = file.type.startsWith('video/');
+    const label   = document.getElementById('seq-media-label');
+    const text    = document.getElementById('seq-media-text');
+    const info    = document.getElementById('seq-media-info');
+    const preview = document.getElementById('seq-media-preview');
+
+    text.textContent = '⏳ 處理中…';
+
+    if (isVideo) {
+      _seqPendingMedia = { blob: file, type: 'video', name: file.name };
+      text.textContent = '✅ ' + file.name;
+      label.classList.add('img-upload-btn--loaded');
+      if (info)    info.textContent = `影片　${(file.size / 1024 / 1024).toFixed(1)} MB`;
+      if (preview) preview.style.display = 'block';
+    } else {
+      compressImage(file, function (dataUrl, w, h) {
+        _seqPendingMedia = { dataUrl, type: 'image', name: file.name };
+        text.textContent = '✅ ' + file.name;
+        label.classList.add('img-upload-btn--loaded');
+        if (info)    info.textContent = `${w} × ${h}`;
+        if (preview) preview.style.display = 'block';
+      });
+    }
+  });
+
+  /* 序列顏色選擇器 */
+  document.querySelectorAll('[data-seq-color]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-seq-color]').forEach(b => b.classList.remove('color-btn--active'));
+      btn.classList.add('color-btn--active');
+      seqSelectedColor = btn.dataset.seqColor;
+    });
+  });
+
+  /* 新增步驟 ／ 儲存修改（編輯模式共用此按鈕） */
+  document.getElementById('btn-seq-add').addEventListener('click', () => {
+    const type    = seqTypeEl.value;
+    const size    = parseInt(document.getElementById('seq-size').value) || 60;
+    const pos     = document.getElementById('seq-position').value;
+    const dur     = parseInt(document.getElementById('seq-dur').value) || 0;
+    const isMedia = type === 'video' || type === 'image';
+    const isEdit  = _seqEditingIdx >= 0;
+
+    /* ── 媒體（影片 / 圖片）── */
+    if (isMedia) {
+      /* 編輯模式且沒有新選取媒體 → 只更新 size/pos/dur */
+      if (isEdit && !_seqPendingMedia) {
+        const orig = seqSteps[_seqEditingIdx];
+        seqSteps[_seqEditingIdx] = Object.assign({}, orig, { size, position: pos, autoDismiss: dur });
+        saveSeq(); renderSeqList(); exitSeqEditMode();
+        showToast('步驟已修改 ✓');
+        return;
+      }
+      if (!_seqPendingMedia) { showToast('請先選取媒體檔案', 'warn'); return; }
+
+      const id = Date.now();
+      if (_seqPendingMedia.type === 'video') {
+        /* 若替換舊影片，只在沒有 preset 引用時才刪舊資料 */
+        if (isEdit) {
+          const old = seqSteps[_seqEditingIdx];
+          if (old && old.content && old.content.startsWith('__vid__') && !_mediaInPreset(old.content)) {
+            const ov = old.content.slice(7);
+            MediaDB.del('vid_' + ov);
+            FileStore.deleteVideo(ov).catch(() => {});
+            ServerStore.deleteVideo(ov).catch(() => {});
+          }
+        }
+        const seqVidBlob = _seqPendingMedia.blob;
+        const seqVidName = document.getElementById('seq-media-file')?.files[0]?.name || 'video.mp4';
+        /* 1. 伺服器（跨電腦） */
+        ServerStore.saveVideo(id, seqVidBlob, seqVidName).catch(() => {});
+        /* 2. 磁碟（FileStore） */
+        FileStore.saveVideo(id, seqVidBlob, seqVidName).catch(() => {});
+        /* 3. IndexedDB（本機備援） */
+        MediaDB.put('vid_' + id, seqVidBlob).then(() => {
+          const step = { type: 'video', content: '__vid__' + id,
+                         size, position: pos, autoDismiss: dur, color: 'none', countdownSecs: 0 };
+          if (isEdit) seqSteps[_seqEditingIdx] = step; else seqSteps.push(step);
+          saveSeq(); renderSeqList(); resetSeqMediaInput();
+          if (isEdit) exitSeqEditMode();
+          showToast(isEdit ? '步驟已修改 ✓' : '影片步驟已加入序列 ✓');
+        }).catch(() => showToast('影片儲存失敗：空間不足', 'warn'));
+      } else {
+        /* 替換舊圖片，只在沒有 preset 引用時才刪舊資料 */
+        if (isEdit) {
+          const old = seqSteps[_seqEditingIdx];
+          if (old && old.content && old.content.startsWith('__img__') && !_mediaInPreset(old.content)) {
+            const oldImgId = old.content.slice(7);
+            MediaDB.del('img_' + oldImgId);
+            localStorage.removeItem('tapmc_img_' + oldImgId);
+            FileStore.deleteImage(oldImgId).catch(() => {});
+            ServerStore.deleteImage(oldImgId).catch(() => {});
+          }
+        }
+        const _imgDataUrl = _seqPendingMedia.dataUrl;
+        /* 1. 伺服器（跨電腦） */
+        ServerStore.saveImage(id, _imgDataUrl).catch(() => {});
+        /* 2. IndexedDB（本機備援） */
+        MediaDB.put('img_' + id, _imgDataUrl).catch(() => {});
+        /* 3. 磁碟檔案（FileStore，選用） */
+        FileStore.saveImage(id, _imgDataUrl).catch(() => {});
+        /* 4. localStorage（備份，空間不足時靜默略過） */
+        try { localStorage.setItem('tapmc_img_' + id, _imgDataUrl); } catch {}
+        const step = { type: 'image', content: '__img__' + id,
+                       size, position: pos, autoDismiss: dur, color: 'none', countdownSecs: 0 };
+        if (isEdit) seqSteps[_seqEditingIdx] = step; else seqSteps.push(step);
+        saveSeq(); renderSeqList(); resetSeqMediaInput();
+        if (isEdit) exitSeqEditMode();
+        showToast(isEdit ? '步驟已修改 ✓' : '圖片步驟已加入序列 ✓');
+      }
+      return;
+    }
+
+    /* ── 文字 / 倒數等文字類型 ── */
+    const content = document.getElementById('seq-content').value.trim();
+    if (!content) { showToast('請輸入內容文字', 'warn'); return; }
+    const countdownSecs = type === 'countdown' ? (parseInt(content) || 60) : 0;
+    const step = {
+      type,
+      content:     type === 'countdown' ? String(countdownSecs) : content,
+      size,
+      color:       seqSelectedColor,
+      position:    pos,
+      autoDismiss: type === 'countdown' ? countdownSecs : dur,
+      countdownSecs,
+    };
+
+    if (isEdit) {
+      seqSteps[_seqEditingIdx] = step;
+      saveSeq(); renderSeqList(); exitSeqEditMode();
+      showToast('步驟已修改 ✓');
+    } else {
+      seqSteps.push(step);
+      saveSeq(); renderSeqList();
+      document.getElementById('seq-content').value = '';
+      showToast('步驟已加入序列 ✓');
+    }
+  });
+
+  function resetSeqMediaInput() {
+    _seqPendingMedia = null;
+    const file    = document.getElementById('seq-media-file');
+    const label   = document.getElementById('seq-media-label');
+    const text    = document.getElementById('seq-media-text');
+    const preview = document.getElementById('seq-media-preview');
+    if (file)    file.value = '';
+    if (text)    text.textContent = '📂 選取媒體檔案';
+    if (label)   label.classList.remove('img-upload-btn--loaded');
+    if (preview) preview.style.display = 'none';
+  }
+
+  /* 開始序列 */
+  document.getElementById('btn-seq-start').addEventListener('click', () => {
+    if (!seqSteps.length) { showToast('序列尚無步驟', 'warn'); return; }
+    const state = { running: true, currentStep: 0, seqId: Date.now() };
+    /* ★ 同時把最新步驟資料寫入 localStorage 並夾帶在 BC 訊息裡
+       確保背板無論如何都能取得最新序列定義 */
+    localStorage.setItem('tapmc_seq',       JSON.stringify({ steps: seqSteps }));
+    localStorage.setItem('tapmc_seq_state', JSON.stringify(state));
+    if (bc) bc.postMessage({ type: 'seq', state, steps: seqSteps });
+    /* 跨電腦：把序列步驟 + 狀態寫到伺服器 */
+    ServerStore.isAvailable().then(ok => {
+      if (!ok) return;
+      Promise.all([
+        ServerStore.saveData('tapmc_seq.json',       { steps: seqSteps }),
+        ServerStore.saveData('tapmc_seq_state.json', state),
+      ]).then(() =>
+        ServerStore.saveData('tapmc_version.json', { v: Date.now(), type: 'seq' })
+      ).catch(() => {});
+    }).catch(() => {});
+    renderSeqList();
+    showToast('序列已開始 ▶');
+  });
+
+  /* 停止序列 */
+  document.getElementById('btn-seq-stop').addEventListener('click', () => {
+    const state = { running: false, currentStep: -1, seqId: null };
+    localStorage.setItem('tapmc_seq_state', JSON.stringify(state));
+    if (bc) bc.postMessage({ type: 'seq', state });
+    /* 跨電腦：寫停止狀態到伺服器 */
+    ServerStore.isAvailable().then(ok => {
+      if (!ok) return;
+      ServerStore.saveData('tapmc_seq_state.json', state).then(() =>
+        ServerStore.saveData('tapmc_version.json', { v: Date.now(), type: 'seq' })
+      ).catch(() => {});
+    }).catch(() => {});
+    renderSeqList();
+    showToast('序列已停止 ■');
+  });
+
+  /* 清空序列（不刪除 preset 仍在引用的媒體） */
+  document.getElementById('btn-seq-clear').addEventListener('click', () => {
+    seqSteps.forEach(s => {
+      if (s.content && s.content.startsWith('__vid__') && !_mediaInPreset(s.content)) {
+        const vid = s.content.slice(7);
+        MediaDB.del('vid_' + vid);
+        FileStore.deleteVideo(vid).catch(() => {});
+        ServerStore.deleteVideo(vid).catch(() => {});
+      }
+      if (s.content && s.content.startsWith('__img__') && !_mediaInPreset(s.content)) {
+        const imgId = s.content.slice(7);
+        MediaDB.del('img_' + imgId);
+        localStorage.removeItem('tapmc_img_' + imgId);
+        FileStore.deleteImage(imgId).catch(() => {});
+        ServerStore.deleteImage(imgId).catch(() => {});
+      }
+    });
+    seqSteps = []; saveSeq(); renderSeqList();
+    showToast('序列已清空');
+  });
+
+  /* ════════════════════════════════════════════════
+     媒體保護：判斷某個 content key 是否被已儲存的 preset 引用
+     content 格式例：'__img__1234' 或 '__vid__1234'
+     ════════════════════════════════════════════════ */
+  function _mediaInPreset(contentKey) {
+    /* 每次從 localStorage 讀取最新 presets，確保判斷準確 */
+    const presets = JSON.parse(localStorage.getItem('tapmc_seq_presets') || '[]');
+    return presets.some(p => Array.isArray(p.steps) && p.steps.some(s => s.content === contentKey));
+  }
+
+  /* ════════════════════════════════════════════════
+     localStorage
+     ════════════════════════════════════════════════ */
+  function saveElements() {
+    try {
+      localStorage.setItem('tapmc_elements', JSON.stringify(elements));
+    } catch (e) {
+      showToast('元素儲存失敗：瀏覽器儲存空間不足', 'warn');
+      console.error('[saveElements] 寫入失敗', e);
+    }
+  }
+
+  function loadElements() {
+    try { return JSON.parse(localStorage.getItem('tapmc_elements') || '[]'); }
+    catch { return []; }
+  }
+
+  /* 監聽跨分頁的 localStorage 變化 */
+  window.addEventListener('storage', e => {
+    if (e.key === 'tapmc_elements') {
+      elements = JSON.parse(e.newValue || '[]');
+      renderList();
+    }
+    if (e.key === 'tapmc_seq_state') {
+      renderSeqList();
+    }
+    /* 其他 admin 分頁修改步驟時，同步本頁的步驟清單 */
+    if (e.key === 'tapmc_seq') {
+      const d = JSON.parse(e.newValue || 'null');
+      if (d && Array.isArray(d.steps)) {
+        seqSteps = d.steps;
+        renderSeqList();
+      }
+    }
+  });
+
+  /* ════════════════════════════════════════════════
+     Toast 提示
+     ════════════════════════════════════════════════ */
+  let toastTimer = null;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('toast--show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('toast--show'), 2000);
+  }
+
+  /* ── 初始化 ── */
+  renderList();
+  renderSeqList();
+
+  /* ════════════════════════════════════════════════
+     背景主題切換
+     ════════════════════════════════════════════════ */
+  const THEME_NAMES = {
+    dark:  '深邃科技',
+    red:   '喜慶紅金',
+    warm:  '溫暖橙光',
+    white: '品牌白底',
+    sunny: '陽光燦爛',
+    vivid: '晴空活力',
+  };
+
+  function _setActiveThemeBtn(name) {
+    document.querySelectorAll('.theme-btn').forEach(b => {
+      b.classList.toggle('theme-btn--active', b.dataset.theme === name);
+    });
+  }
+
+  (function initTheme() {
+    const saved = localStorage.getItem('tapmc_theme') || 'dark';
+    _setActiveThemeBtn(saved);
+
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.theme;
+        localStorage.setItem('tapmc_theme', name);
+        _setActiveThemeBtn(name);
+        notify('theme');
+        showToast('主題已切換：' + (THEME_NAMES[name] || name) + ' ✓');
+      });
+    });
+  })();
+
+  /* ════════════════════════════════════════════════
+     品牌圖形背景切換
+     ════════════════════════════════════════════════ */
+  const MOTIF_NAMES = {
+    '0':      '關閉',
+    'orange': '橙韻流動',
+    'drop':   '水滴晶瑩',
+    'vivid':  '三色繽紛',
+    'geo':    '幾何輔圖',
+    'brand':  '品牌特顯',
+  };
+  function _setActiveMotifBtn(val) {
+    document.querySelectorAll('.motif-btn').forEach(b => {
+      b.classList.toggle('theme-btn--active', b.dataset.motif === val);
+    });
+  }
+  (function initMotif() {
+    const saved = localStorage.getItem('tapmc_motif') || '0';
+    _setActiveMotifBtn(saved);
+    document.querySelectorAll('.motif-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.motif;
+        localStorage.setItem('tapmc_motif', val);
+        _setActiveMotifBtn(val);
+        notify('motif');
+        showToast('品牌圖形：' + (MOTIF_NAMES[val] || val) + ' ✓');
+      });
+    });
+  })();
+
+  /* ════════════════════════════════════════════════
+     伺服器模式初始化
+     在所有變數與函式定義完成後非同步執行：
+     · 若 /api/ping 回應正常 → 伺服器模式
+     · 從 data/ 載入最新清單（優先於 localStorage）
+     · 更新 dir-bar 顯示狀態
+     ════════════════════════════════════════════════ */
+  (async function _serverInit() {
+    const ok = await ServerStore.isAvailable();
+    if (!ok) return;   /* 非伺服器模式，Branch A / B 維持原有邏輯 */
+
+    /* ── 更新 dir-bar 為伺服器模式 ── */
+    const ds  = document.getElementById('dir-status');
+    const lbl = document.getElementById('dir-bar-label');
+    if (ds) {
+      ds.textContent = '🌐 伺服器模式，資料自動同步至 data/';
+      ds.className   = 'dir-bar__path dir-bar__path--set';
+    }
+    if (lbl) lbl.textContent = '伺服器儲存（跨電腦共用）';
+
+    /* 隱藏所有手動按鈕（匯出/匯入/選擇目錄） */
+    ['btn-pick-dir', 'btn-export-json', 'btn-import-json'].forEach(btnId => {
+      const el = document.getElementById(btnId);
+      if (el) el.style.display = 'none';
+    });
+
+    /* ── 從伺服器載入序列清單（Presets） ── */
+    const sPresets = await ServerStore.loadData('tapmc_presets.json');
+    if (Array.isArray(sPresets)) {
+      seqPresets = sPresets;
+      try { localStorage.setItem('tapmc_seq_presets', JSON.stringify(seqPresets)); } catch {}
+      renderPresetList();
+    }
+
+    /* ── 從伺服器載入目前序列步驟 ── */
+    const sSteps = await ServerStore.loadData('tapmc_seq_steps.json');
+    if (Array.isArray(sSteps)) {
+      seqSteps = sSteps;
+      try { localStorage.setItem('tapmc_seq', JSON.stringify({ steps: seqSteps })); } catch {}
+      renderSeqList();
+    }
+
+    /* ── 從伺服器載入主題 ── */
+    const sTheme = await ServerStore.loadData('tapmc_theme.json');
+    if (sTheme && sTheme.theme) {
+      localStorage.setItem('tapmc_theme', sTheme.theme);
+      _setActiveThemeBtn(sTheme.theme);
+    }
+
+    showToast('已連線至伺服器，清單同步完成 ✓');
+  })();
+
+})();

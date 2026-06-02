@@ -7,12 +7,21 @@ from utils.auth import get_current_admin
 from utils.csv_parser import parse_csv
 import config
 
+def _load_components() -> dict:
+    return json.loads(config.COMPONENTS_FILE.read_text(encoding="utf-8"))
+
+def _save_components(data: dict):
+    config.COMPONENTS_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent="\t"), encoding="utf-8"
+    )
+
 router = APIRouter(prefix="/data", tags=["data"])
 
 
 def _get_data_path(component_id: str, data_type: str) -> Path:
-    if data_type == "historyData":
-        return config.HISTORY_DATA_DIR / f"{component_id}.json"
+    # historyData/ is the MoreInfo-dialog historical overlay — not the main chart feed.
+    # All admin uploads (including time-series) go to chartData/ so that
+    # TimelineSeparateChart / TimelineStackedChart (which read chart_data) get the data.
     return config.CHART_DATA_DIR / f"{component_id}.json"
 
 
@@ -41,11 +50,11 @@ async def preview_csv(
 ):
     content = (await file.read()).decode("utf-8")
     try:
-        parsed, detected_type = parse_csv(content)
+        parsed, detected_type, suggested_chart = parse_csv(content)
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
     data_type = detected_type if target == "auto" else target
-    return {"data_type": data_type, "preview": parsed}
+    return {"data_type": data_type, "preview": parsed, "suggested_chart": suggested_chart}
 
 
 @router.post("/{component_id}/upload")
@@ -60,7 +69,7 @@ async def upload_csv(
     """
     content = (await file.read()).decode("utf-8")
     try:
-        parsed, detected_type = parse_csv(content)
+        parsed, detected_type, _ = parse_csv(content)
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -70,4 +79,19 @@ async def upload_csv(
     _backup(path)
     path.write_text(json.dumps(parsed, ensure_ascii=False, indent="\t"), encoding="utf-8")
 
-    return {"message": f"已成功更新 {data_type}/{component_id}.json", "data_type": data_type}
+    # ── 散佈圖：自動將 CSV 欄名寫入 chart_config.categories ────────────
+    extra = {}
+    x_label = parsed.get("x_label", "")
+    y_label = parsed.get("y_label", "")
+    if x_label and y_label:
+        try:
+            comps = _load_components()
+            if str(component_id) in comps["data"]:
+                comp = comps["data"][str(component_id)]
+                comp.setdefault("chart_config", {})["categories"] = [x_label, y_label]
+                _save_components(comps)
+                extra["categories_updated"] = [x_label, y_label]
+        except Exception:
+            pass  # 非致命錯誤，不阻斷上傳
+
+    return {"message": f"已成功更新 {data_type}/{component_id}.json", "data_type": data_type, **extra}
