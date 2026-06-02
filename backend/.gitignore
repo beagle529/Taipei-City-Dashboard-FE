@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+data/admins.json
+data/login_log.json
+data/issue_log.json
+data/backup_log.json
+data/backups/

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>臺北農產 51 週年股東常會</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════════════
+       底層：動態環境層 (Z-index: 1)
+       · canvas 粒子系統（由 main.js 控制）
+       · 三顆漂浮光暈球（純 CSS 動畫）
+       ════════════════════════════════════════════════ -->
+  <div class="bg-layer" aria-hidden="true">
+
+    <!-- Canvas 粒子背景 -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- 漂浮光暈：臺灣紅 -->
+    <div class="orb orb--red"></div>
+    <!-- 漂浮光暈：豐收橘 -->
+    <div class="orb orb--orange"></div>
+    <!-- 漂浮光暈：智慧藍 -->
+    <div class="orb orb--blue"></div>
+
+    <!-- LED 像素格線紋理疊層 -->
+    <div class="grid-texture"></div>
+
+    <!-- 科技掃描光束（由上往下移動的彩色細線） -->
+    <div class="scan-beam"></div>
+
+  </div><!-- /bg-layer -->
+
+  <!-- ════════════════════════════════════════════════
+       HUD 角落裝飾框（Z-index: 5）
+       四角 L 形線框，呼應 LED 控制室儀表板視覺
+       ════════════════════════════════════════════════ -->
+  <div class="corners-overlay" aria-hidden="true">
+    <span class="corner corner--tl"></span>
+    <span class="corner corner--tr"></span>
+    <span class="corner corner--bl"></span>
+    <span class="corner corner--br"></span>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════
+       表層：核心安全區 Safe Zone (Z-index: 10)
+       RWD 水平三欄佈局：左Logo ─ 中文字 ─ 右Logo
+       ════════════════════════════════════════════════ -->
+  <!-- ── 左上角：Logo 框（51th 氣球浮於右上角） ── -->
+  <aside class="logo-corner" aria-label="臺北農產主標誌">
+    <div class="logo-corner__box">
+      <img
+        src="assets/logo-beinong-market.png"
+        alt="臺北農產 TAPMC Logo"
+        class="logo-corner__img"
+        draggable="false"
+      />
+      <!-- 氣球徽章：絕對定位浮於框右上角 -->
+      <span class="logo-corner__badge">51<sup class="badge-sup">th</sup></span>
+    </div>
+  </aside>
+
+  <!-- ── 縮小版標題（公告/VIP 覆蓋時淡入於 Logo 下方） ── -->
+  <div class="mini-title" id="mini-title" aria-hidden="true">
+    <span class="mini-title__eyebrow" id="mini-eyebrow">2025 · TAPMC</span>
+    <span class="mini-title__main"    id="mini-main">臺北農產</span>
+    <span class="mini-title__sub"     id="mini-sub">115 年度　股東常會</span>
+  </div>
+
+  <main class="safe-zone" role="main">
+
+    <!-- ── 主題文字（全螢幕置中） ── -->
+    <section class="hero-text" aria-label="活動主題">
+
+      <!-- 上方小標：年份標籤 -->
+      <p class="hero-text__eyebrow">
+        <span class="eyebrow-dot" aria-hidden="true"></span>
+        <span id="hero-eyebrow">2025 · TAPMC</span>
+        <span class="eyebrow-dot" aria-hidden="true"></span>
+      </p>
+
+      <!-- 主標題：臺北農產全寬置中 -->
+      <h1 class="hero-text__title">
+        <span class="title-line title-line--main">臺北農產</span>
+      </h1>
+
+      <!-- 漸層分隔線 -->
+      <div class="hero-text__divider" aria-hidden="true">
+        <span class="divider-gem" aria-hidden="true"></span>
+      </div>
+
+      <!-- 副標題 -->
+      <p class="hero-text__subtitle">
+        <span class="subtitle-year">115 年度</span>
+        <span class="subtitle-sep" aria-hidden="true">｜</span>
+        <span class="subtitle-event">股東常會</span>
+      </p>
+
+      <!-- 下方英文輔助字 -->
+      <p class="hero-text__footnote" id="hero-footnote">
+        Annual General Meeting of Shareholders
+      </p>
+
+    </section><!-- /hero-text -->
+
+
+  </main><!-- /safe-zone -->
+
+
+  <!-- ════════════════════════════════════════════════
+       底部裝飾帶：全寬橫幅跑馬燈效果
+       ════════════════════════════════════════════════ -->
+  <footer class="ticker-bar" aria-hidden="true">
+    <div class="ticker-track">
+      <span class="ticker-item">臺北農產運銷股份有限公司</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">創立於民國 63 年</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">經營理念：誠信・服務・創新・效率</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">服務農民・穩定供需・守護餐桌</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">Taipei Agricultural Products Marketing Corporation</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">臺北農產運銷股份有限公司</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">創立於民國 63 年</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">經營理念：誠信・服務・創新・效率</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">服務農民・穩定供需・守護餐桌</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item">Taipei Agricultural Products Marketing Corporation</span>
+      <span class="ticker-sep">◆</span>
+    </div>
+  </footer>
+
+  <!-- 動態元素容器（由 backdrop.js 管理） -->
+  <div id="dynamic-layer" style="position:fixed;inset:0;z-index:50;pointer-events:none;"></div>
+
+  <script src="js/main.js"></script>
+  <script src="js/tapmc-server-config.js"></script>
+  <script src="js/filestore.js"></script>
+  <script src="js/serverstore.js"></script>
+  <script src="js/backdrop.js"></script>
+</body>
+</html>

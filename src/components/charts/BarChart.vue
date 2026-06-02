@@ -64,7 +64,11 @@ const chartOptions = ref({
 	yaxis: {
 		labels: {
 			formatter: function (value) {
-				return value.length > 7 ? value.slice(0, 6) + "..." : value;
+				if (!value) return value;
+				// 日期格式 YYYY-MM-DD 或 ISO → 顯示 MM/DD
+				const m = String(value).match(/^(\d{4})[T\-](\d{2})[T\-](\d{2})/);
+				if (m) return `${m[2]}/${m[3]}`;
+				return value.length > 8 ? value.slice(0, 7) + "…" : value;
 			},
 		},
 	},

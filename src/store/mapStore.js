@@ -11,8 +11,8 @@ import { createApp, defineComponent, nextTick, ref } from "vue";
 import { defineStore } from "pinia";
 import { useAuthStore } from "./authStore";
 import { useDialogStore } from "./dialogStore";
-import mapboxGl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import mapboxGl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import axios from "axios";
 import { Threebox } from "threebox-plugin";
 
@@ -54,8 +54,7 @@ export const useMapStore = defineStore("map", {
 		// 1. Creates the mapbox instance and passes in initial configs
 		initializeMapBox() {
 			this.map = null;
-			const MAPBOXTOKEN = import.meta.env.VITE_MAPBOXTOKEN;
-			mapboxGl.accessToken = MAPBOXTOKEN;
+			// MapLibre GL JS — 免費開源，不需要 token
 			this.map = new mapboxGl.Map({
 				...MapObjectConfig,
 				style: mapStyle,
@@ -102,19 +101,7 @@ export const useMapStore = defineStore("map", {
 						})
 						.addLayer(TaipeiVillage);
 				});
-			if (!authStore.isMobileDevice) {
-				this.map
-					.addSource("taipei_building_3d_source", {
-						type: "vector",
-						url: import.meta.env.VITE_MAPBOXTILE,
-					})
-					.addLayer(TaipeiBuilding);
-			}
-			this.map.addSource("potential_source", {
-				type: "raster",
-				url: "mapbox://xiguaakako.0l9ig67q",
-				tileSize: 256,
-			});
+			// 3D 建築物與 potential_source 需要 Mapbox 專屬 token，暫時停用
 			this.addSymbolSources();
 		},
 		// 3. Adds symbols that will be used by some map layers

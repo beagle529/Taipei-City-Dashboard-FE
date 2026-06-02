@@ -1,0 +1,1227 @@
+/* ════════════════════════════════════════════════════════════
+   臺北農產（TAPMC）51 週年股東常會 ─ 動態螢幕背板
+   style.css  |  版本 3.0（低 CPU 效能版）
+
+   效能原則：只有 transform 與 opacity 能走 GPU 合成通道，
+   不觸發 repaint。box-shadow / text-shadow / filter 動畫
+   全部禁止，改用靜態值或 opacity 替代。
+   ════════════════════════════════════════════════════════════ */
+
+
+/* ── 1. CIS 設計語彙 ── */
+:root {
+  --color-red:      #E6005C;
+  --color-orange:   #F39800;
+  --color-blue:     #00A0E9;
+  --color-bg:       #020617;
+  --color-white:    #FFFFFF;
+  --color-white-60: rgba(255,255,255,0.60);
+  --color-white-30: rgba(255,255,255,0.30);
+  --color-white-10: rgba(255,255,255,0.10);
+
+  --font-family: "PingFang TC","Heiti TC","Microsoft JhengHei","蘋方-繁","黑體-繁",sans-serif;
+  --radius-card: 20px;
+  --ticker-h:    clamp(28px, 3vh, 44px);
+  --orb-blur:    55px;
+
+  --divider-gradient: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-orange) 20%,
+    var(--color-red)    50%,
+    var(--color-blue)   80%,
+    transparent 100%
+  );
+
+  /* ── 主題系統（可由後台切換）─ 預設：深邃科技 ── */
+  --orb-1-color:   #E6005C;
+  --orb-2-color:   #F39800;
+  --orb-3-color:   #00A0E9;
+  --orb-1-opacity: 0.40;
+  --orb-2-opacity: 0.40;
+  --orb-3-opacity: 0.30;
+  --orb-1-size:    40vw;
+  --orb-2-size:    35vw;
+  --orb-3-size:    30vw;
+  --corner-color:         #00A0E9;
+  --corner-shadow:        rgba(0,160,233,0.40);
+  --ticker-bg-color:      rgba(2,6,23,0.88);
+  --ticker-border-color:  rgba(0,160,233,0.30);
+  --logo-border:          rgba(0,160,233,0.55);
+  --logo-shadow-1:        rgba(0,160,233,0.40);
+  --logo-shadow-2:        rgba(0,160,233,0.18);
+  --title-glow-1:         rgba(0,160,233,0.70);
+  --title-glow-2:         rgba(0,160,233,0.30);
+}
+
+/* ══════════════════════════════════════════════
+   主題 2：喜慶紅金（更紅更金、飽和、濃郁）
+   ══════════════════════════════════════════════ */
+[data-theme="red"] {
+  --orb-1-color:   #FF0025;
+  --orb-2-color:   #FFD000;
+  --orb-3-color:   #FF4400;
+  --orb-1-opacity: 0.90;
+  --orb-2-opacity: 0.78;
+  --orb-3-opacity: 0.65;
+  --orb-1-size:    68vw;
+  --orb-2-size:    58vw;
+  --orb-3-size:    50vw;
+  --corner-color:         #FFD000;
+  --corner-shadow:        rgba(255,208,0,0.80);
+  --ticker-bg-color:      rgba(80,0,10,0.90);
+  --ticker-border-color:  rgba(255,208,0,0.70);
+  --logo-border:          rgba(255,208,0,0.80);
+  --logo-shadow-1:        rgba(255,208,0,0.60);
+  --logo-shadow-2:        rgba(255,50,0,0.30);
+  --title-glow-1:         rgba(255,200,0,0.90);
+  --title-glow-2:         rgba(255,0,30,0.60);
+  --divider-gradient: linear-gradient(
+    90deg,
+    transparent 0%,
+    #FFD000 20%,
+    #FF0025 50%,
+    #FF6600 80%,
+    transparent 100%
+  );
+}
+[data-theme="red"] body {
+  /* 飽和中國紅漸層，頂部較亮讓紅色發光 */
+  background: radial-gradient(ellipse at 35% 30%, #8B0018 0%, #500010 40%, #280008 75%, #0E0002 100%);
+}
+
+/* ══════════════════════════════════════════════
+   主題 3：溫暖橙光（熱情、節慶）
+   ══════════════════════════════════════════════ */
+[data-theme="warm"] {
+  --orb-1-color:   #FF5500;
+  --orb-2-color:   #E6005C;
+  --orb-3-color:   #FFD000;
+  --orb-1-opacity: 0.65;
+  --orb-2-opacity: 0.52;
+  --orb-3-opacity: 0.44;
+  --orb-1-size:    54vw;
+  --orb-2-size:    44vw;
+  --orb-3-size:    38vw;
+  --corner-color:         #FF8800;
+  --corner-shadow:        rgba(255,136,0,0.55);
+  --ticker-bg-color:      rgba(14,3,0,0.92);
+  --ticker-border-color:  rgba(255,136,0,0.45);
+  --logo-border:          rgba(255,136,0,0.60);
+  --logo-shadow-1:        rgba(255,136,0,0.45);
+  --logo-shadow-2:        rgba(255,136,0,0.20);
+  --title-glow-1:         rgba(255,130,0,0.75);
+  --title-glow-2:         rgba(255,60,0,0.40);
+  --divider-gradient: linear-gradient(
+    90deg,
+    transparent 0%,
+    #FFD000 20%,
+    #FF4400 50%,
+    #E6005C 80%,
+    transparent 100%
+  );
+}
+[data-theme="warm"] body {
+  background: radial-gradient(ellipse at 50% 60%, #220900 0%, #0e0300 55%, #060100 100%);
+}
+
+/* ══════════════════════════════════════════════
+   主題 4：晴空活力（更綠更白、清新明亮）
+   ══════════════════════════════════════════════ */
+[data-theme="vivid"] {
+  --orb-1-color:   #FFFFFF;
+  --orb-2-color:   #00E870;
+  --orb-3-color:   #00FFB0;
+  --orb-1-opacity: 0.75;
+  --orb-2-opacity: 0.80;
+  --orb-3-opacity: 0.65;
+  --orb-1-size:    52vw;
+  --orb-2-size:    56vw;
+  --orb-3-size:    42vw;
+  --corner-color:         #00E870;
+  --corner-shadow:        rgba(0,232,112,0.75);
+  --ticker-bg-color:      rgba(0,50,20,0.88);
+  --ticker-border-color:  rgba(0,232,112,0.60);
+  --logo-border:          rgba(0,232,112,0.75);
+  --logo-shadow-1:        rgba(0,232,112,0.55);
+  --logo-shadow-2:        rgba(255,255,255,0.25);
+  --title-glow-1:         rgba(0,80,30,0.90);
+  --title-glow-2:         rgba(0,50,20,0.55);
+  --divider-gradient: linear-gradient(
+    90deg,
+    transparent 0%,
+    #FFFFFF 20%,
+    #00E870 50%,
+    #00FFB0 80%,
+    transparent 100%
+  );
+}
+[data-theme="vivid"] body {
+  /* 頂部近白光 → 中段清新翠綠 → 底部深綠（保持白字可讀） */
+  background: radial-gradient(ellipse at 50% 5%, #E8FFF2 0%, #A0ECC0 28%, #1A9A50 58%, #063A20 100%);
+}
+/* 強化標題在亮背景下的可讀性 */
+[data-theme="vivid"] .title-line--main {
+  text-shadow:
+    0 0 30px rgba(0,60,25,0.90),
+    0 0 80px rgba(0,30,15,0.50),
+    2px 2px 0 rgba(0,0,0,0.65);
+}
+[data-theme="vivid"] .title-line--main.title--color-anim {
+  text-shadow: none;
+}
+/* 所有白字在亮綠背景下加深色底影 */
+[data-theme="vivid"] .subtitle-year,
+[data-theme="vivid"] .subtitle-sep,
+[data-theme="vivid"] .subtitle-event,
+[data-theme="vivid"] .hero-text__footnote,
+[data-theme="vivid"] .mini-title__eyebrow,
+[data-theme="vivid"] .mini-title__main,
+[data-theme="vivid"] .mini-title__sub,
+[data-theme="vivid"] .dyn-el--white {
+  text-shadow: 0 2px 10px rgba(0,0,0,0.80), 1px 1px 0 rgba(0,0,0,0.50) !important;
+}
+
+
+/* ══════════════════════════════════════════════
+   主題 5：陽光燦爛（白天、明亮、繽紛、無暗色）
+   ══════════════════════════════════════════════ */
+[data-theme="sunny"] {
+  --orb-1-color:   #FFD600;
+  --orb-2-color:   #FF8800;
+  --orb-3-color:   #00C853;
+  --orb-1-opacity: 0.72;
+  --orb-2-opacity: 0.62;
+  --orb-3-opacity: 0.55;
+  --orb-1-size:    58vw;
+  --orb-2-size:    48vw;
+  --orb-3-size:    40vw;
+  --corner-color:         #FFD600;
+  --corner-shadow:        rgba(255,210,0,0.70);
+  --ticker-bg-color:      rgba(0,70,170,0.82);
+  --ticker-border-color:  rgba(255,210,0,0.60);
+  --logo-border:          rgba(255,210,0,0.75);
+  --logo-shadow-1:        rgba(255,210,0,0.55);
+  --logo-shadow-2:        rgba(255,140,0,0.28);
+  --title-glow-1:         rgba(0,50,160,0.88);
+  --title-glow-2:         rgba(0,25,100,0.50);
+  --divider-gradient: linear-gradient(
+    90deg,
+    transparent 0%,
+    #FFD600 20%,
+    #FF6600 50%,
+    #00C853 80%,
+    transparent 100%
+  );
+}
+[data-theme="sunny"] body {
+  background: radial-gradient(ellipse at 50% 5%, #FFF9C4 0%, #B3E5FC 35%, #29B6F6 65%, #0277BD 100%);
+}
+/* 強化主標題在亮背景下的可讀性 */
+[data-theme="sunny"] .title-line--main {
+  text-shadow:
+    0 0 30px rgba(0,60,180,0.85),
+    0 0 80px rgba(0,30,100,0.45),
+    2px 2px 0 rgba(0,0,0,0.65);
+}
+[data-theme="sunny"] .title-line--main.title--color-anim {
+  text-shadow: none;
+}
+/* 所有白字在亮藍天背景下加深色底影 */
+[data-theme="sunny"] .subtitle-year,
+[data-theme="sunny"] .subtitle-sep,
+[data-theme="sunny"] .subtitle-event,
+[data-theme="sunny"] .hero-text__footnote,
+[data-theme="sunny"] .mini-title__eyebrow,
+[data-theme="sunny"] .mini-title__main,
+[data-theme="sunny"] .mini-title__sub,
+[data-theme="sunny"] .dyn-el--white {
+  text-shadow: 0 2px 10px rgba(0,0,0,0.80), 1px 1px 0 rgba(0,0,0,0.50) !important;
+}
+
+
+/* ══════════════════════════════════════════════
+   主題 6：品牌白底（純白 + 三色品牌圖形環繞）
+   ══════════════════════════════════════════════ */
+[data-theme="white"] {
+  /* 覆寫白色變數 → 讓全站白字改為深色（自動適配所有文字） */
+  --color-white:    #1a1a2a;
+  --color-white-60: rgba(26,26,42,0.70);
+  --color-white-30: rgba(26,26,42,0.40);
+  --color-white-10: rgba(26,26,42,0.10);
+  /* 光暈球：品牌三色，低透明（白底不需深色光暈） */
+  --orb-1-color:   #f85101;
+  --orb-2-color:   #6a4cff;
+  --orb-3-color:   #ee0287;
+  --orb-1-opacity: 0.12;
+  --orb-2-opacity: 0.10;
+  --orb-3-opacity: 0.10;
+  --orb-1-size:    50vw;
+  --orb-2-size:    44vw;
+  --orb-3-size:    38vw;
+  --corner-color:         #f85101;
+  --corner-shadow:        rgba(248,81,1,0.55);
+  --ticker-bg-color:      rgba(248,81,1,0.07);
+  --ticker-border-color:  rgba(248,81,1,0.35);
+  --logo-border:          rgba(248,81,1,0.45);
+  --logo-shadow-1:        rgba(248,81,1,0.30);
+  --logo-shadow-2:        rgba(106,76,255,0.15);
+  --title-glow-1:         rgba(0,0,0,0);
+  --title-glow-2:         rgba(0,0,0,0);
+  --divider-gradient: linear-gradient(
+    90deg,
+    transparent 0%,
+    #f85101 20%,
+    #ee0287 50%,
+    #6a4cff 80%,
+    transparent 100%
+  );
+}
+[data-theme="white"] body {
+  background: #FFFFFF;
+}
+/* 主標題：白底下用深色直接顯示（非動畫時） */
+[data-theme="white"] .title-line--main {
+  color: #1a1a2a;
+  -webkit-text-fill-color: #1a1a2a;
+  text-shadow: none;
+}
+/* 動畫時恢復漸層模式（不需額外處理，class 本身會覆蓋） */
+[data-theme="white"] .title-line--main.title--color-anim,
+[data-theme="white"] .title-line--main.title--anim-2,
+[data-theme="white"] .title-line--main.title--anim-3,
+[data-theme="white"] .title-line--main.title--anim-4 {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+/* 字幕、英文等文字：白底直接可讀，移除不必要的光暈 */
+[data-theme="white"] .subtitle-year  { text-shadow: none; }
+[data-theme="white"] .subtitle-event { text-shadow: none; }
+/* 跑馬燈：白底淺邊框 */
+[data-theme="white"] .ticker-bar {
+  background: rgba(248,81,1,0.06) !important;
+  border-top: 1px solid rgba(248,81,1,0.30) !important;
+}
+[data-theme="white"] .ticker-item { color: rgba(26,26,42,0.72); }
+[data-theme="white"] .ticker-sep  { color: #f85101; }
+/* Logo 框：白底時保持白色背景 */
+[data-theme="white"] .logo-corner__box {
+  background: rgba(255,255,255,0.96) !important;
+}
+
+/* ── 2. Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);   /* 預設主題；各主題用 [data-theme] body 覆蓋 */
+  font-family: var(--font-family);
+  color: var(--color-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background 0.8s ease;
+}
+
+
+/* ── 3. 底層動態環境 ── */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  /* 將整個底層隔離成獨立的合成層，避免影響上層 repaint */
+  will-change: transform;
+}
+
+#particle-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+}
+
+/* 光暈球：只用 transform 動畫（GPU 合成，零 repaint） */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(var(--orb-blur));
+  opacity: 0.40;
+  width: 40vw; height: 40vw;
+  will-change: transform;
+}
+
+.orb--red {
+  background: radial-gradient(circle, var(--orb-1-color), transparent 70%);
+  opacity: var(--orb-1-opacity);
+  width:  var(--orb-1-size);
+  height: var(--orb-1-size);
+  top: -15%; left: -10%;
+  animation: float-a 20s ease-in-out infinite alternate;
+  transition: opacity 1s, width 1s, height 1s, background 1s;
+}
+.orb--orange {
+  background: radial-gradient(circle, var(--orb-2-color), transparent 70%);
+  opacity: var(--orb-2-opacity);
+  width:  var(--orb-2-size);
+  height: var(--orb-2-size);
+  bottom: -20%; right: -8%;
+  animation: float-b 25s ease-in-out infinite alternate;
+  transition: opacity 1s, width 1s, height 1s, background 1s;
+}
+.orb--blue {
+  background: radial-gradient(circle, var(--orb-3-color), transparent 70%);
+  opacity: var(--orb-3-opacity);
+  width:  var(--orb-3-size);
+  height: var(--orb-3-size);
+  top: 10%; right: 15%;
+  animation: float-c 30s ease-in-out infinite alternate;
+  transition: opacity 1s, width 1s, height 1s, background 1s;
+}
+
+/* 只用 transform — 零 repaint */
+@keyframes float-a {
+  0%   { transform: translate(0,    0   ); }
+  50%  { transform: translate(10vw, 8vh ); }
+  100% { transform: translate(5vw,  14vh); }
+}
+@keyframes float-b {
+  0%   { transform: translate(0,      0    ); }
+  50%  { transform: translate(-12vw, -10vh ); }
+  100% { transform: translate(-6vw,  -16vh ); }
+}
+@keyframes float-c {
+  0%   { transform: translate(0,   0   ); }
+  50%  { transform: translate(-8vw, 10vh); }
+  100% { transform: translate(6vw, -6vh ); }
+}
+
+/* 掃描線與格線：移除，是 repaint 來源之一 */
+.scan-beam    { display: none; }
+.grid-texture { display: none; }
+
+
+/* ── 4a. 左上角 Logo 容器 ── */
+.logo-corner {
+  position: fixed;
+  top:  clamp(20px, 3vh,  44px);
+  left: clamp(20px, 3vw,  52px);
+  z-index: 15;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  overflow: visible;            /* 確保氣球超出邊界仍可見 */
+  /* gap 不再需要：徽章已移入 box 內以絕對定位浮動 */
+  animation: fade-up 1.0s ease-out 0.2s both;
+}
+
+/* Logo 框：靜態霓虹邊框 + opacity 呼吸（不碰 box-shadow） */
+.logo-corner__box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid var(--logo-border);
+  border-radius: var(--radius-card);
+  padding: clamp(6px, 1.0vh, 12px) clamp(8px, 0.8vw, 14px);
+  box-shadow:
+    0 0  8px 2px var(--logo-shadow-1),
+    0 0 24px 5px var(--logo-shadow-2),
+    0 0 40px 8px rgba(230,0,92,0.10);
+  animation: neon-opacity 3.5s ease-in-out 1.2s infinite alternate;
+  will-change: opacity;
+  transition: border-color 0.8s, box-shadow 0.8s;
+}
+
+/* 霓虹呼吸 = 純 opacity，不碰任何幾何或陰影屬性 */
+@keyframes neon-opacity {
+  0%   { opacity: 0.80; }
+  100% { opacity: 1.00; }
+}
+
+.logo-corner__img {
+  display: block;
+  width: clamp(120px, 14vw, 220px);
+  height: auto;
+  max-height: clamp(44px, 6.5vh, 90px);
+  object-fit: contain;
+  /* 靜態：移除 logo-lift 動畫（filter 動畫會 repaint） */
+}
+
+/* 51th 氣球徽章：絕對定位浮於 Logo 框右上角 */
+.logo-corner__badge {
+  /* 定位：超出框右上角外側 */
+  position: absolute;
+  top:   -12px;
+  right: -12px;
+
+  /* 圓形氣球外觀（縮小 1/3） */
+  width:  clamp(28px, 2.8vw, 43px);
+  height: clamp(28px, 2.8vw, 43px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    #FF6BB0 0%,
+    var(--color-red)    45%,
+    var(--color-orange) 100%
+  );
+  box-shadow:
+    0  4px 18px rgba(230,0,92,0.55),
+    0  1px  4px rgba(0,0,0,0.30),
+    inset 0 -3px 8px rgba(0,0,0,0.18),
+    inset 2px 3px 8px rgba(255,255,255,0.30);  /* 氣球高光 */
+
+  /* 文字 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(9px, 1.0vw, 14px);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  font-family: var(--font-family);
+
+  /* 漂浮動畫（transform only → GPU合成，零 repaint） */
+  animation: badge-float 2.8s ease-in-out infinite;
+  will-change: transform;
+  z-index: 2;
+}
+
+/* 氣球細繩 */
+.logo-corner__badge::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 8px;
+  background: linear-gradient(to bottom, rgba(243,152,0,0.80), rgba(243,152,0,0.20));
+  border-radius: 1px;
+}
+
+@keyframes badge-float {
+  0%,100% { transform: translateY(0px)    rotate(-2deg); }
+  50%     { transform: translateY(-7px)   rotate( 2deg); }
+}
+
+.badge-sup {
+  font-size: 0.48em;
+  font-weight: 700;
+  vertical-align: super;
+  letter-spacing: 0;
+  color: rgba(255,255,255,0.90);
+  -webkit-text-fill-color: rgba(255,255,255,0.90);
+}
+
+.logo-corner__line { display: none; }
+
+
+/* ── 4c. 縮小版標題（公告覆蓋時出現於 Logo 下方） ── */
+.mini-title {
+  position: fixed;
+  /* Logo top + Logo 高度 (box padding+img+border ≈ clamp(64px,10vh,132px)) + 間距 */
+  top:  calc(clamp(20px, 3vh, 44px) + clamp(64px, 10vh, 132px) + clamp(10px, 1.5vh, 20px));
+  left: clamp(20px, 3vw, 52px);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3px, 0.5vh, 6px);
+  /* 初始：隱藏 */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.55s ease;
+}
+
+/* 公告/VIP 覆蓋啟動時淡入 */
+.mini-title--show {
+  opacity: 1;
+}
+
+.mini-title__eyebrow {
+  font-size: clamp(9px, 1vw, 13px);
+  font-weight: 300;
+  letter-spacing: 0.22em;
+  color: var(--color-white-60);
+  text-transform: uppercase;
+}
+
+.mini-title__main {
+  font-size: clamp(18px, 2.4vw, 38px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--color-white);
+  text-shadow:
+    0 0 20px rgba(0,160,233,0.55),
+    1px 1px 0 rgba(0,0,0,0.45);
+  line-height: 1.1;
+}
+
+.mini-title__sub {
+  font-size: clamp(10px, 1.2vw, 18px);
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  color: var(--color-white-60);
+}
+
+
+/* ── 4b. 安全區主容器 ── */
+.safe-zone {
+  position: fixed;
+  inset: 0;
+  bottom: var(--ticker-h);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ── 5. 入場動畫 ── */
+
+/* Logo 角落：有 transform 沒關係（不是文字元素） */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* 文字元素：只用 opacity，絕對不加 transform
+   原因：transform 會把元素推上 GPU 合成層，關閉 sub-pixel
+   antialiasing，中文字會看起來模糊 */
+@keyframes fade-in-only {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 公告/VIP 出現時，主標題區淡出讓位 */
+.hero-text {
+  transition: opacity 0.55s ease;
+}
+.hero-text--hide {
+  opacity: 0 !important;
+  transition: opacity 0.45s ease;
+}
+
+
+/* ── 6. 主題文字區 ── */
+.hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 clamp(16px, 2vw, 48px);
+  animation: fade-in-only 1.2s ease-out 0.1s both;
+}
+
+/* 上方小標 */
+.hero-text__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 16px);
+  font-size: clamp(12px, 1.4vw, 20px);
+  font-weight: 300;
+  letter-spacing: 0.25em;
+  color: var(--color-white-60);
+  margin-bottom: clamp(12px, 1.5vh, 24px);
+  text-transform: uppercase;
+}
+
+/* 小圓點：只用 opacity（移除 transform scale） */
+.eyebrow-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--color-orange);
+  box-shadow: 0 0 8px var(--color-orange);
+  animation: dot-blink 2.5s ease-in-out infinite;
+  will-change: opacity;
+}
+@keyframes dot-blink {
+  0%, 100% { opacity: 1;   }
+  50%       { opacity: 0.3; }
+}
+
+/* 主標題 */
+.hero-text__title {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(10px, 1.6vw, 28px);
+  line-height: 1.0;
+  margin-bottom: clamp(16px, 2.5vh, 36px);
+  user-select: none;
+}
+
+/* 「臺北農產」：靜態模式 */
+.title-line--main {
+  font-size: clamp(48px, 8.5vw, 130px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--color-white);
+  text-shadow:
+    0 0 40px var(--title-glow-1),
+    0 0 90px var(--title-glow-2),
+    2px 2px 0 rgba(0,0,0,0.50);
+  transition: color 0.6s, -webkit-text-fill-color 0.6s, text-shadow 0.8s;
+}
+
+/* ════════════════════════════════════════════════
+   品牌圖形背景疊層 (Brand Motif Layer)
+   使用北農官方 Pantone 三色：
+   Orange 021C #f85101 / 2725C #6a4cff / 225C #ee0287
+   ════════════════════════════════════════════════ */
+#tapmc-motif-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;        /* 粒子 canvas(0) 之上，內容層之下 */
+  overflow: hidden;
+}
+/* 外層：負責漂移（translate） */
+.bshape-wrap {
+  position: absolute;
+  transform-origin: center center;
+  will-change: transform;
+}
+/* 內層：負責旋轉（rotate），與外層分開避免衝突） */
+.bshape-inner {
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+.bshape-inner svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* 漂移：四角輪流移動，軌跡自然不重複 */
+@keyframes bshape-drift {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(var(--dx2), var(--dy1)); }
+  50%  { transform: translate(var(--dx),  var(--dy));  }
+  75%  { transform: translate(var(--dx1), var(--dy2)); }
+  100% { transform: translate(0, 0); }
+}
+/* 順時針旋轉 */
+@keyframes bshape-spin-cw {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+/* 逆時針旋轉 */
+@keyframes bshape-spin-ccw {
+  from { transform: rotate(0deg);    }
+  to   { transform: rotate(-360deg); }
+}
+
+/* ── 主標題動畫共用基底 ── */
+.title-line--main.title--color-anim,
+.title-line--main.title--anim-2,
+.title-line--main.title--anim-3,
+.title-line--main.title--anim-4 {
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  text-shadow: none;
+  background-size: 300% auto;
+  will-change: background-position;
+}
+
+/* 樣式 1：彩虹流動 */
+.title-line--main.title--color-anim {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-blue)   0%,
+    var(--color-red)    25%,
+    var(--color-orange) 50%,
+    var(--color-blue)   75%,
+    var(--color-red)   100%
+  );
+  animation: title-color-flow 6s linear infinite;
+}
+@keyframes title-color-flow {
+  0%   { background-position: 0%   center; }
+  100% { background-position: 300% center; }
+}
+
+/* 樣式 2：金光閃耀 */
+.title-line--main.title--anim-2 {
+  background-image: linear-gradient(
+    90deg,
+    #FF8C00 0%,
+    #FFD700 18%,
+    #FFFBE0 36%,
+    #FFD700 54%,
+    #FF8C00 72%,
+    #FFD700 100%
+  );
+  animation: title-gold-flow 4s linear infinite;
+}
+@keyframes title-gold-flow {
+  0%   { background-position: 0%   center; }
+  100% { background-position: 300% center; }
+}
+
+/* 樣式 3：紅金輝煌 */
+.title-line--main.title--anim-3 {
+  background-image: linear-gradient(
+    90deg,
+    #FF0025 0%,
+    #FFD000 20%,
+    #FF6600 40%,
+    #FFD000 60%,
+    #FF0025 80%,
+    #FFD000 100%
+  );
+  animation: title-red-gold-flow 5s linear infinite;
+}
+@keyframes title-red-gold-flow {
+  0%   { background-position: 0%   center; }
+  100% { background-position: 300% center; }
+}
+
+/* 樣式 4：極光波動 */
+.title-line--main.title--anim-4 {
+  background-image: linear-gradient(
+    90deg,
+    #00E870 0%,
+    #00C8FF 20%,
+    #9B5CFF 40%,
+    #E6005C 60%,
+    #00C8FF 80%,
+    #00E870 100%
+  );
+  animation: title-aurora-flow 8s linear infinite;
+}
+@keyframes title-aurora-flow {
+  0%   { background-position: 0%   center; }
+  100% { background-position: 300% center; }
+}
+
+/* 漸層分隔線 */
+.hero-text__divider {
+  position: relative;
+  width: clamp(200px, 40vw, 600px);
+  height: 2px;
+  background: var(--divider-gradient);
+  margin-bottom: clamp(16px, 2.5vh, 36px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 菱形：只旋轉 transform，移除 box-shadow 動畫 */
+.divider-gem {
+  position: absolute;
+  width: 10px; height: 10px;
+  background: var(--color-white);
+  transform: rotate(45deg);
+  box-shadow: 0 0 10px var(--color-orange);
+  animation: gem-spin 10s linear infinite;
+  will-change: transform;
+}
+@keyframes gem-spin {
+  to { transform: rotate(405deg); }
+}
+
+/* 副標題 */
+.hero-text__subtitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: clamp(6px, 1vw, 16px);
+  font-size: clamp(18px, 2.8vw, 52px);
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  margin-bottom: clamp(12px, 1.5vh, 24px);
+  user-select: none;
+}
+
+.subtitle-year  { color: var(--color-white); text-shadow: 0 0 16px rgba(243,152,0,0.50); }
+.subtitle-sep   { color: var(--color-white-60); font-weight: 300; }
+.subtitle-event { color: var(--color-white); text-shadow: 0 0 16px rgba(0,160,233,0.45); }
+
+/* 英文輔助字 */
+.hero-text__footnote {
+  font-size: clamp(11px, 1.2vw, 18px);
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  color: var(--color-white-60);
+  font-family: Georgia,"Times New Roman",serif;
+  font-style: italic;
+}
+.hero-text__footnote sup { font-size: 0.65em; vertical-align: super; }
+
+
+/* ── 7. 底部跑馬燈 ── */
+.ticker-bar {
+  position: fixed;
+  bottom: 0; left: 0;
+  width: 100%;
+  height: var(--ticker-h);
+  z-index: 20;
+  overflow: hidden;
+  background: var(--ticker-bg-color);
+  border-top: 1px solid var(--ticker-border-color);
+  display: flex;
+  align-items: center;
+  transition: background 0.8s, border-color 0.8s;
+}
+
+.ticker-track {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: ticker-scroll 40s linear infinite;
+  will-change: transform;
+}
+
+.ticker-item {
+  font-size: clamp(12px, 1.4vh, 20px);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--color-white-60);
+  padding: 0 clamp(16px, 2vw, 32px);
+}
+
+.ticker-sep { color: var(--color-orange); font-size: clamp(8px,1vh,14px); opacity: 0.7; }
+
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+
+/* ── 8. HUD 角落裝飾框 ── */
+.corners-overlay {
+  position: fixed;
+  inset: clamp(12px, 2vw, 32px);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  width:  clamp(28px, 4vw, 56px);
+  height: clamp(28px, 4vw, 56px);
+  border-color: var(--corner-color);
+  border-style: solid;
+  box-shadow: 0 0 8px var(--corner-shadow);
+  animation: corner-fade 4s ease-in-out infinite alternate;
+  will-change: opacity;
+  transition: border-color 0.8s, box-shadow 0.8s;
+}
+
+.corner--tl { top: 0;    left: 0;  border-width: 2px 0 0 2px; animation-delay: 0s;  }
+.corner--tr { top: 0;    right: 0; border-width: 2px 2px 0 0; animation-delay: 1s;  }
+.corner--bl { bottom: 0; left: 0;  border-width: 0 0 2px 2px; animation-delay: 2s;  }
+.corner--br { bottom: 0; right: 0; border-width: 0 2px 2px 0; animation-delay: 3s;  }
+
+@keyframes corner-fade {
+  0%   { opacity: 0.30; }
+  100% { opacity: 0.75; }
+}
+
+
+/* ── 9. RWD 響應式斷點 ── */
+@media (min-aspect-ratio: 21/9) {
+  .title-line--main { font-size: clamp(36px, 6vw, 100px); }
+}
+
+@media (max-aspect-ratio: 4/3) {
+  .safe-zone { flex-direction: column; justify-content: center; gap: clamp(16px,3vh,40px); }
+}
+
+@media (max-width: 767px) {
+  .safe-zone { flex-direction: column; gap: 16px; }
+}
+
+
+/* ── 動態元素樣式（由 backdrop.js 注入至前台） ── */
+.dyn-el {
+  position: absolute;
+  font-family: var(--font-family);
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: none;
+  animation: fade-in-only 0.5s ease both;
+}
+
+.dyn-el--white    { color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,0.8); }
+.dyn-el--red      { color: var(--color-red);    text-shadow: 0 0 20px rgba(230,0,92,0.6); }
+.dyn-el--orange   { color: var(--color-orange); text-shadow: 0 0 20px rgba(243,152,0,0.6); }
+.dyn-el--blue     { color: var(--color-blue);   text-shadow: 0 0 20px rgba(0,160,233,0.6); }
+.dyn-el--gradient {
+  background: linear-gradient(135deg, var(--color-orange), var(--color-red));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 下方條 Lower Third（跑馬燈容器）*/
+.dyn-el--lower-third {
+  left: 0; right: 0; bottom: calc(var(--ticker-h) + 16px);
+  width: 100%;
+  padding: 0;               /* 由內部 lt-ticker-track 控制 */
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(2,6,23,0.95) 0%, rgba(0,30,70,0.88) 55%, transparent 100%);
+  border-left: 4px solid var(--color-blue);
+  display: flex;
+  align-items: center;
+}
+
+/* 下方條跑馬燈軌道 */
+.lt-ticker-track {
+  display: flex;
+  align-items: stretch;
+  white-space: nowrap;
+  /* 關鍵：不允許被父層 flex 壓縮，否則兩份複本會同時可見 */
+  flex-shrink: 0;
+  /* translateX(-50%) = 移動一個 cell（100vw）→ 無縫銜接第二份 */
+  animation: lt-ticker-scroll var(--lt-dur, 12s) linear infinite;
+  will-change: transform;
+}
+
+/* 每份複本撐滿一個視口寬度，確保初始只有第一份可見 */
+.lt-ticker-cell {
+  display: inline-flex;
+  align-items: center;
+  min-width: 100vw;
+  padding: 14px 0 14px 56px;
+  box-sizing: border-box;
+}
+
+.lt-ticker-sep {
+  color: var(--color-orange);
+  opacity: 0.70;
+  padding: 0 32px 0 40px;
+  font-size: 0.60em;
+  flex-shrink: 0;
+}
+
+@keyframes lt-ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* 公告框：位置由 JS 控制，此處只設外觀 */
+.dyn-el--announce {
+  background: rgba(2,6,23,0.90);
+  border: 1px solid rgba(0,160,233,0.50);
+  border-radius: 16px;
+  padding: 28px 48px;
+  box-shadow: 0 0 60px rgba(0,160,233,0.25);
+  max-width: 70vw;
+}
+
+/* 倒數計時 */
+.dyn-el--countdown {
+  font-size: clamp(60px, 10vw, 160px) !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* 圖片元素 */
+.dyn-el--image {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  line-height: 0;
+}
+.dyn-el--image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow:
+    0 8px 40px rgba(0,0,0,0.65),
+    0 0 0 1px rgba(255,255,255,0.08);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 影片元素 */
+.dyn-el--video {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  line-height: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 8px 48px rgba(0,0,0,0.72),
+    0 0 0 1px rgba(255,255,255,0.08);
+}
+.dyn-el--video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 序列元素淡入（新步驟出現時的入場） */
+@keyframes seq-el-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.dyn-el--seq {
+  animation: seq-el-in 0.45s ease both;
+}
+
+/* 動態元素淡出 */
+@keyframes fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+.dyn-el--fading {
+  animation: fade-out 0.8s ease forwards !important;
+}
+
+
+/* ════════════════════════════════════════════════
+   VIP 歡迎全螢幕覆蓋層
+   ════════════════════════════════════════════════ */
+
+/* 外層：全螢幕半透明遮罩淡入 */
+.vip-overlay {
+  position: absolute !important;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.88);
+  animation: vip-overlay-in 0.5s ease both;
+  z-index: 10;
+}
+
+@keyframes vip-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 掃描光束：由上而下 */
+.vip-scan {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.vip-scan::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-blue) 30%,
+    var(--color-orange) 50%,
+    var(--color-red) 70%,
+    transparent 100%
+  );
+  opacity: 0;
+  animation: vip-scan-move 3.5s ease-in-out 0.6s infinite;
+}
+@keyframes vip-scan-move {
+  0%   { top: 5%;  opacity: 0;   }
+  8%   { opacity: 0.8; }
+  88%  { opacity: 0.8; }
+  100% { top: 95%; opacity: 0;   }
+}
+
+/* 四角裝飾框 */
+.vip-corners { position: absolute; inset: clamp(20px,4vw,60px); pointer-events: none; }
+.vip-corner  {
+  position: absolute;
+  width: clamp(32px, 5vw, 64px);
+  height: clamp(32px, 5vw, 64px);
+  border-color: var(--color-orange);
+  border-style: solid;
+  opacity: 0;
+  animation: vip-corner-in 0.4s ease both;
+}
+.vip-corner--tl { top:0; left:0;   border-width: 3px 0 0 3px; animation-delay: 0.3s; }
+.vip-corner--tr { top:0; right:0;  border-width: 3px 3px 0 0; animation-delay: 0.4s; }
+.vip-corner--bl { bottom:0; left:0;  border-width: 0 0 3px 3px; animation-delay: 0.5s; }
+.vip-corner--br { bottom:0; right:0; border-width: 0 3px 3px 0; animation-delay: 0.6s; }
+
+@keyframes vip-corner-in {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 0.85; transform: scale(1); }
+}
+
+/* 文字容器：彈跳放大入場 */
+.vip-text-wrap {
+  position: relative;
+  text-align: center;
+  padding: clamp(32px,5vw,80px) clamp(48px,8vw,120px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px,2vh,24px);
+  animation: vip-text-in 0.9s cubic-bezier(0.34, 1.45, 0.64, 1) 0.2s both;
+}
+
+@keyframes vip-text-in {
+  0%   { opacity: 0; transform: scale(0.4) translateY(40px); }
+  70%  { opacity: 1; transform: scale(1.04) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+/* 歡迎 / 蒞臨 */
+.vip-prefix,
+.vip-suffix {
+  font-size: clamp(20px, 3vw, 48px);
+  font-weight: 300;
+  letter-spacing: 0.5em;
+  color: rgba(255,255,255,0.70);
+  font-family: var(--font-family);
+}
+
+/* 分隔線 */
+.vip-divider-line {
+  width: clamp(160px, 30vw, 480px);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-orange) 30%,
+    var(--color-red)    70%,
+    transparent
+  );
+  opacity: 0.65;
+}
+
+/* 姓名：漸層大字 + 呼吸光暈 */
+.vip-name {
+  font-size: clamp(52px, 8vw, 128px);
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  line-height: 1.1;
+  font-family: var(--font-family);
+  background: linear-gradient(135deg, var(--color-orange) 0%, var(--color-red) 55%, #FF70B0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* 靜態 filter：首幀算一次，不動畫避免 repaint */
+  filter: drop-shadow(0 0 24px rgba(243,152,0,0.55));
+  animation: vip-name-pulse 2.2s ease-in-out 1.2s infinite alternate;
+  will-change: filter;
+}
+
+@keyframes vip-name-pulse {
+  from { filter: drop-shadow(0 0 18px rgba(243,152,0,0.45)); }
+  to   { filter: drop-shadow(0 0 36px rgba(230,0,92,0.65));  }
+}
+

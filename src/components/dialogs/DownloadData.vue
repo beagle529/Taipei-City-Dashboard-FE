@@ -1,7 +1,7 @@
 <!-- Developed by Taipei Urban Intelligence Center 2023 -->
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useDialogStore } from "../../store/dialogStore";
 
 import { jsonToCsv } from "../../assets/utilityFunctions/jsonToCsv";
@@ -14,19 +14,53 @@ const name = ref(dialogStore.moreInfoContent.name);
 // Stores the file type
 const fileType = ref("JSON");
 
+// 判斷是否為蔬果行情組件（price_table 格式）
+const isMarketPrice = computed(() => {
+	const types = dialogStore.moreInfoContent.chart_config?.types ?? [];
+	return types.includes("MarketPriceWidget") || types.includes("MarketPriceHistoryWidget");
+});
+
+const isHistoryWidget = computed(() =>
+	dialogStore.moreInfoContent.chart_config?.types?.includes("MarketPriceHistoryWidget")
+);
+
+// 若歷史組件的 chart_data 尚未由組件寫入，則主動向 API 補抓最新一筆
+onMounted(async () => {
+	if (!isHistoryWidget.value) return;
+	if (dialogStore.moreInfoContent.chart_data?.length) return; // 已有資料，不補抓
+	try {
+		const listRes = await fetch("/api/market-price/history");
+		const list = await listRes.json();
+		const latest = list.find(r => !r.rest_day);
+		if (!latest) return;
+		const detailRes = await fetch(`/api/market-price/history/${latest.date}`);
+		const detail = await detailRes.json();
+		dialogStore.moreInfoContent.chart_data = detail.price_table ?? [];
+	} catch { /* 靜默失敗 */ }
+});
+
 const parsedJson = computed(() => {
 	let json = {};
 	json.data = dialogStore.moreInfoContent.chart_data;
 	if (dialogStore.moreInfoContent.chart_config.categories) {
 		json.categories = dialogStore.moreInfoContent.chart_config.categories;
 	}
-
 	const jsonString = encodeURIComponent(JSON.stringify(json));
-	// const base64Json = btoa(jsonString)
 	return jsonString;
 });
 
 const parsedCsv = computed(() => {
+	// 蔬果行情：price_table 是 [{name, variety, high, mid, low}] 格式
+	if (isMarketPrice.value) {
+		const rows = dialogStore.moreInfoContent.chart_data;
+		if (!rows?.length) return encodeURI("品名,品種,上價,中價,下價\n");
+		let csv = "品名,品種,上價(元/公斤),中價(元/公斤),下價(元/公斤)\n";
+		rows.forEach(r => {
+			csv += `${r.name},${r.variety},${r.high},${r.mid},${r.low}\n`;
+		});
+		return encodeURI(csv);
+	}
+	// 一般組件：走原本的 jsonToCsv
 	const csvString = jsonToCsv(
 		dialogStore.moreInfoContent.chart_data,
 		dialogStore.moreInfoContent.chart_config
@@ -60,7 +94,7 @@ function handleClose() {
 					value="JSON"
 					id="JSON"
 				/>
-				<label for="JSON">
+				<label for="JSON" @click="fileType = 'JSON'">
 					<div></div>
 					JSON
 				</label>
@@ -71,7 +105,7 @@ function handleClose() {
 					value="CSV"
 					id="CSV"
 				/>
-				<label for="CSV">
+				<label for="CSV" @click="fileType = 'CSV'">
 					<div></div>
 					CSV (UTF-8)
 				</label>

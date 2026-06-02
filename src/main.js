@@ -38,6 +38,15 @@ import HeatmapChart from "./components/charts/HeatmapChart.vue";
 import PolarChart from "./components/charts/PolarChart.vue";
 import PyramidChart from "./components/charts/PyramidChart.vue";
 import SimpleColChart from "./components/charts/SimpleColChart.vue";
+import MarketPriceWidget from "./components/MarketPriceWidget.vue";
+import MarketPriceHistoryWidget from "./components/MarketPriceHistoryWidget.vue";
+import RealNameTable from "./components/charts/RealNameTable.vue";
+import StackedColumnChart from "./components/charts/StackedColumnChart.vue";
+import DataTable from "./components/charts/DataTable.vue";
+import ScatterChart from "./components/charts/ScatterChart.vue";
+import LineColumnChart from "./components/charts/LineColumnChart.vue";
+import CandlestickChart from "./components/charts/CandlestickChart.vue";
+import MarketFloorChart from "./components/charts/MarketFloorChart.vue";
 const app = createApp(App);
 
 // Add Core Packages: Vue-Router, Pinia, Apexcharts
@@ -63,5 +72,14 @@ app.component("HeatmapChart", HeatmapChart);
 app.component("PolarChart", PolarChart);
 app.component("PyramidChart", PyramidChart);
 app.component("SimpleColChart", SimpleColChart);
+app.component("MarketPriceWidget", MarketPriceWidget);
+app.component("MarketPriceHistoryWidget", MarketPriceHistoryWidget);
+app.component("RealNameTable", RealNameTable);
+app.component("StackedColumnChart", StackedColumnChart);
+app.component("DataTable", DataTable);
+app.component("ScatterChart", ScatterChart);
+app.component("LineColumnChart", LineColumnChart);
+app.component("CandlestickChart", CandlestickChart);
+app.component("MarketFloorChart", MarketFloorChart);
 
 app.mount("#app");

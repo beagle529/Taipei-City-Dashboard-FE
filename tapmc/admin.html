@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>背板控制台 ─ 臺北農產 51 週年</title>
+  <link rel="icon" href="data:,">
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-red:    #E6005C;
+      --color-orange: #F39800;
+      --color-blue:   #00A0E9;
+      --color-bg:     #020617;
+      --font: "PingFang TC","Heiti TC","Microsoft JhengHei","蘋方-繁",sans-serif;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--color-bg);
+      font-family: var(--font);
+      color: #e0e8f0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── 頁面佈局 ── */
+    .page {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 0 16px 40px;
+    }
+
+    /* ── 頁首 ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 0 18px;
+      border-bottom: 1px solid rgba(0,160,233,0.25);
+      margin-bottom: 24px;
+    }
+
+    .page-header__logo {
+      width: 100px;
+      height: auto;
+      max-height: 36px;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 8px;
+      padding: 4px 8px;
+    }
+
+    .page-header__title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #fff;
+      flex: 1;
+    }
+
+    .page-header__badge {
+      font-size: 11px;
+      color: rgba(0,160,233,0.8);
+      background: rgba(0,160,233,0.10);
+      border: 1px solid rgba(0,160,233,0.28);
+      border-radius: 5px;
+      padding: 3px 9px;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── 狀態列 ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 22px;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #aaa;
+      flex-shrink: 0;
+    }
+    .status-dot--on  { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+    .status-dot--off { background: #ef4444; }
+
+    /* ── 分頁標籤 ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 9px 6px;
+      background: none;
+      border: none;
+      border-radius: 7px;
+      color: rgba(255,255,255,0.45);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+      font-family: var(--font);
+    }
+    .tab:hover    { color: rgba(255,255,255,0.80); }
+    .tab--active  { background: rgba(0,160,233,0.18); color: #fff; }
+
+    /* ── 面板內容 ── */
+    .pane { display: none; flex-direction: column; gap: 12px; }
+    .pane--active { display: flex; }
+
+    /* ── 表單元件 ── */
+    .label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: rgba(0,160,233,0.85);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .input,
+    .select,
+    .textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      padding: 10px 13px;
+      color: #fff;
+      font-size: 14px;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--color-blue); }
+    .select option  { background: #0d1b3e; }
+    .textarea       { resize: vertical; min-height: 72px; }
+
+    .range {
+      width: 100%;
+      accent-color: var(--color-blue);
+      cursor: pointer;
+    }
+
+    /* ── 按鈕 ── */
+    .btn {
+      padding: 11px 16px;
+      border: 1px solid rgba(255,255,255,0.20);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.07);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: background 0.18s, transform 0.12s;
+      letter-spacing: 0.05em;
+    }
+    .btn:hover            { background: rgba(255,255,255,0.14); transform: translateY(-1px); }
+    .btn--primary         { background: var(--color-blue); border-color: var(--color-blue); }
+    .btn--primary:hover   { background: #0090d4; }
+    .btn--danger          { background: rgba(230,0,92,0.22); border-color: var(--color-red); color: #ff6fa8; }
+    .btn--danger:hover    { background: rgba(230,0,92,0.40); }
+    .btn--vip {
+      background: linear-gradient(135deg, var(--color-orange), var(--color-red));
+      border-color: transparent;
+      font-weight: 700;
+    }
+    .btn--vip:hover { background: linear-gradient(135deg,#ffaa1a,#ff1a6e); }
+
+    /* ── 卡片容器 ── */
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .card--vip {
+      background: rgba(243,152,0,0.07);
+      border-color: rgba(243,152,0,0.28);
+    }
+
+    .card__title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.10em;
+      color: var(--color-orange);
+    }
+
+    /* ── 主題選擇器 ── */
+    .theme-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 6px 10px;
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.18s, transform 0.15s, border-color 0.18s;
+      font-family: var(--font);
+    }
+    .theme-btn:hover      { background: rgba(255,255,255,0.10); transform: translateY(-2px); }
+    .theme-btn--active    { border-color: #fff !important; background: rgba(255,255,255,0.12) !important; }
+    .theme-btn__preview {
+      width: 100%;
+      height: 28px;
+      border-radius: 6px;
+      display: block;
+    }
+    .theme-btn__name {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .theme-btn--active .theme-btn__name { color: #fff; }
+
+    /* ── 分隔線 ── */
+    .divider {
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255,255,255,0.22);
+      letter-spacing: 0.12em;
+      margin: 2px 0;
+    }
+
+    /* ── 顏色選擇器 ── */
+    .colors {
+      display: flex;
+      gap: 8px;
+    }
+    .color-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.12s;
+      font-family: var(--font);
+    }
+    .color-btn:hover       { transform: scale(1.06); }
+    .color-btn--active     { border-color: #fff !important; }
+    .color-btn--white      { background: #fff; color: #020617; }
+    .color-btn--red        { background: var(--color-red);    color: #fff; }
+    .color-btn--orange     { background: var(--color-orange); color: #fff; }
+    .color-btn--blue       { background: var(--color-blue);   color: #fff; }
+    .color-btn--gradient   { background: linear-gradient(135deg,var(--color-orange),var(--color-red)); color:#fff; }
+
+    /* ── 行排列 ── */
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .row .label { margin: 0; white-space: nowrap; }
+    .row .select { flex: 1; }
+
+    /* ── 元素列表 ── */
+    .hint  { font-size: 11px; color: rgba(255,255,255,0.38); }
+    .empty { font-size: 12px; color: rgba(255,255,255,0.28); text-align: center; padding: 24px 0; }
+
+    .el-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 10px;
+    }
+    .el-item__label {
+      flex: 1;
+      font-size: 12px;
+      color: #dce8f5;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .el-item__type {
+      font-size: 10px;
+      color: rgba(0,160,233,0.70);
+      background: rgba(0,160,233,0.10);
+      border-radius: 4px;
+      padding: 2px 6px;
+      white-space: nowrap;
+    }
+    .el-btn {
+      width: 28px; height: 28px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.07);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.13s;
+      flex-shrink: 0;
+    }
+    .el-btn:hover        { background: rgba(255,255,255,0.16); }
+    .el-btn--del         { color: #ff6fa8; }
+    .el-btn--del:hover   { background: rgba(230,0,92,0.28); }
+
+    /* ── VIP 雙欄佈局 ── */
+    .vip-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .vip-roster-card,
+    .vip-history-card { gap: 8px; }
+
+    .vip-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* 可點擊名單項目 */
+    .vip-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: rgba(243,152,0,0.09);
+      border: 1px solid rgba(243,152,0,0.22);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #fff;
+      font-family: var(--font);
+      transition: background 0.15s;
+      width: 100%;
+      text-align: left;
+      gap: 6px;
+    }
+    .vip-chip:hover { background: rgba(243,152,0,0.22); }
+    .vip-chip__name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vip-chip__go   { font-size: 13px; opacity: 0.7; flex-shrink: 0; }
+
+    /* 紀錄項目 */
+    .vip-log-item {
+      padding: 7px 10px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 7px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .vip-log-item__name { color: #fff; font-weight: 600; }
+    .vip-log-item__time { color: rgba(255,255,255,0.40); display: block; }
+
+    /* ── 圖片縮圖列表 ── */
+    .slide-thumb-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+    .slide-thumb-row img {
+      width: 52px; height: 36px;
+      object-fit: cover;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+    .slide-thumb-row__name {
+      flex: 1;
+      font-size: 11px;
+      color: rgba(255,255,255,0.55);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .slide-thumb-row__del {
+      width: 22px; height: 22px;
+      border: none; border-radius: 5px;
+      background: rgba(230,0,92,0.18);
+      color: #ff6fa8; font-size: 13px;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .slide-thumb-row__del:hover { background: rgba(230,0,92,0.38); }
+
+    /* ── 圖片上傳按鈕 ── */
+    .img-upload-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(255,255,255,0.05);
+      border: 2px dashed rgba(0,160,233,0.35);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: rgba(255,255,255,0.55);
+      transition: border-color 0.18s, background 0.18s;
+    }
+    .img-upload-btn:hover {
+      border-color: rgba(0,160,233,0.70);
+      background: rgba(0,160,233,0.07);
+      color: #fff;
+    }
+    .img-upload-btn--loaded {
+      border-style: solid;
+      border-color: rgba(0,160,233,0.55);
+      color: rgba(0,255,120,0.85);
+    }
+
+    /* ── 序列已儲存清單項目 ── */
+    .seq-preset-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: rgba(243,152,0,0.06);
+      border: 1px solid rgba(243,152,0,0.20);
+      border-radius: 10px;
+    }
+    .seq-preset-item__name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      color: #fff;
+    }
+    .seq-preset-item__count {
+      font-size: 10px;
+      color: rgba(243,152,0,0.75);
+      white-space: nowrap;
+    }
+    .btn--load {
+      padding: 5px 12px;
+      font-size: 12px;
+      background: rgba(243,152,0,0.18);
+      border-color: rgba(243,152,0,0.45);
+      color: #f39800;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .btn--load:hover { background: rgba(243,152,0,0.35); }
+
+    /* ── 序列步驟列表 ── */
+    .seq-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 10px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .seq-step--active {
+      border-color: rgba(34,197,94,0.55);
+      background: rgba(34,197,94,0.08);
+    }
+    .seq-step__num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(0,160,233,0.18);
+      color: rgba(0,160,233,0.9);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .seq-step__label {
+      flex: 1;
+      font-size: 12px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .seq-step__type {
+      font-size: 10px;
+      color: rgba(0,160,233,0.70);
+      background: rgba(0,160,233,0.10);
+      border-radius: 4px;
+      padding: 2px 6px;
+      white-space: nowrap;
+    }
+
+    /* ── 工作目錄列 ── */
+    .dir-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(0,160,233,0.06);
+      border: 1px solid rgba(0,160,233,0.18);
+      border-radius: 10px;
+      margin-bottom: 18px;
+    }
+    .dir-bar__icon { font-size: 16px; flex-shrink: 0; }
+    .dir-bar__info { flex: 1; min-width: 0; }
+    .dir-bar__label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: rgba(0,160,233,0.65);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .dir-bar__path {
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .dir-bar__path--set { color: rgba(34,197,94,0.9); font-weight: 600; }
+    .btn--dir {
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(0,160,233,0.18);
+      border-color: rgba(0,160,233,0.45);
+      color: #00A0E9;
+      border-radius: 7px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn--dir:hover { background: rgba(0,160,233,0.32); transform: none; }
+    .btn--dir-orange {
+      background: rgba(243,152,0,0.18);
+      border-color: rgba(243,152,0,0.45);
+      color: #F39800;
+    }
+    .btn--dir-orange:hover { background: rgba(243,152,0,0.32); transform: none; }
+    .dir-bar__actions { display:flex; gap:6px; flex-shrink:0; }
+
+    /* ── Toast 提示 ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(0,160,233,0.92);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 10px 22px;
+      border-radius: 999px;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    .toast--show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- 頁首 -->
+  <header class="page-header">
+    <img src="assets/logo-beinong-market.png" alt="TAPMC" class="page-header__logo" />
+    <h1 class="page-header__title">背板控制台</h1>
+    <span class="page-header__badge">51<sup style="font-size:.7em">th</sup> 週年</span>
+  </header>
+
+  <!-- 連線狀態 -->
+  <div class="status-bar">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="status-text">正在偵測背板連線…</span>
+  </div>
+
+  <!-- 工作目錄列 -->
+  <div class="dir-bar">
+    <span class="dir-bar__icon">💾</span>
+    <div class="dir-bar__info">
+      <div class="dir-bar__label" id="dir-bar-label">資料儲存位置</div>
+      <div class="dir-bar__path" id="dir-status">偵測中…</div>
+    </div>
+    <div class="dir-bar__actions">
+      <!-- Chrome/Edge：選擇本機目錄 -->
+      <button class="btn btn--dir"        id="btn-pick-dir"    style="display:none;">📁 選擇目錄</button>
+      <!-- 任意瀏覽器：匯出 JSON / 匯入 JSON -->
+      <button class="btn btn--dir-orange" id="btn-export-json" style="display:none;">📤 匯出</button>
+      <button class="btn btn--dir"        id="btn-import-json" style="display:none;">📥 匯入</button>
+    </div>
+  </div>
+
+  <!-- 分頁 -->
+  <div class="tabs" role="tablist">
+    <button class="tab tab--active" data-tab="vip"      role="tab">歡迎長官</button>
+    <button class="tab"             data-tab="text"     role="tab">文字設定</button>
+    <button class="tab"             data-tab="add"      role="tab">新增元素</button>
+    <button class="tab"             data-tab="elements" role="tab">元素管理</button>
+    <button class="tab"             data-tab="seq"      role="tab">📽 序列</button>
+  </div>
+
+  <!-- ── Tab 1：歡迎長官 ── -->
+  <div class="pane pane--active" id="tab-vip">
+
+    <!-- 全局設定（顯示樣式 + 秒數） -->
+    <div class="card" style="flex-direction:row;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;display:flex;flex-direction:column;gap:6px;">
+        <label class="label" style="margin:0;">顯示樣式</label>
+        <select class="select" id="vip-style">
+          <option value="vip">全螢幕覆蓋</option>
+          <option value="lower-third">下方橫條</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:120px;display:flex;flex-direction:column;gap:6px;">
+        <label class="label" style="margin:0;">消失秒數</label>
+        <select class="select" id="vip-duration">
+          <option value="10">10 秒</option>
+          <option value="15" selected>15 秒</option>
+          <option value="20">20 秒</option>
+          <option value="30">30 秒</option>
+          <option value="60">60 秒</option>
+          <option value="0">不消失</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 名單 + 紀錄 雙欄 -->
+    <div class="vip-grid">
+
+      <!-- 左：名單 -->
+      <div class="card card--vip vip-roster-card">
+        <div class="vip-panel-header">
+          <p class="card__title">📋 歡迎名單</p>
+          <button class="el-btn" id="btn-toggle-roster-edit" title="編輯名單">✏️</button>
+        </div>
+
+        <!-- 編輯模式（預設隱藏） -->
+        <div id="vip-roster-edit" style="display:none;flex-direction:column;gap:8px;">
+          <textarea class="textarea" id="vip-roster-input" rows="7"
+            placeholder="每行輸入一位&#10;例：&#10;陳理事長&#10;林局長&#10;王董事長"></textarea>
+          <div class="row">
+            <button class="btn btn--primary" id="btn-save-roster" style="flex:1;">儲存</button>
+            <button class="btn" id="btn-cancel-roster" style="flex:1;">取消</button>
+          </div>
+        </div>
+
+        <!-- 名單列表（可點擊） -->
+        <div id="vip-roster-list">
+          <p class="empty" style="font-size:11px;">點右上角 ✏️ 新增名單</p>
+        </div>
+
+        <!-- 手動輸入 -->
+        <div class="divider">─ 手動輸入 ─</div>
+        <div class="row">
+          <input class="input" id="vip-name" type="text"
+                 placeholder="姓名職稱" style="flex:1;min-width:0;" />
+          <button class="btn btn--vip" id="btn-vip"
+                  style="white-space:nowrap;padding:10px 14px;flex-shrink:0;">顯示</button>
+        </div>
+      </div>
+
+      <!-- 右：紀錄 -->
+      <div class="card vip-history-card">
+        <div class="vip-panel-header">
+          <p class="card__title">📜 呈現紀錄</p>
+          <button class="el-btn el-btn--del" id="btn-clear-history" title="清除紀錄">✕</button>
+        </div>
+        <div id="vip-history-list">
+          <p class="empty" style="font-size:11px;">尚無紀錄</p>
+        </div>
+      </div>
+
+    </div><!-- /vip-grid -->
+
+    <!-- 連續播放：自動依序播放名單內所有人 -->
+    <button class="btn btn--primary" id="btn-vip-play-all"
+            style="width:100%;font-size:14px;font-weight:700;padding:13px;letter-spacing:0.08em;">
+      ▶▶ &nbsp;連續播放全部名單
+    </button>
+
+    <!-- 緊急下架按鈕：移除目前所有正在顯示的歡迎畫面 -->
+    <button class="btn btn--danger" id="btn-vip-dismiss"
+            style="width:100%;font-size:14px;font-weight:700;padding:13px;letter-spacing:0.08em;">
+      ✕ &nbsp;緊急下架歡迎畫面
+    </button>
+
+    <p class="hint">點擊名單中的姓名即可立即顯示歡迎畫面；或點「連續播放」自動依序輪播全部。</p>
+  </div>
+
+  <!-- ── Tab 2：文字設定 ── -->
+  <div class="pane" id="tab-text">
+
+    <!-- 🎨 背景主題 -->
+    <div class="divider" style="margin-top:0;margin-bottom:10px;">── 🎨 背景主題 ──</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;">
+
+      <button class="theme-btn" data-theme="dark">
+        <span class="theme-btn__preview" style="background:linear-gradient(135deg,#020617 0%,#0a2040 60%,#00A0E9 100%);"></span>
+        <span class="theme-btn__name">深邃科技</span>
+      </button>
+
+      <button class="theme-btn" data-theme="red">
+        <span class="theme-btn__preview" style="background:linear-gradient(135deg,#3A0008 0%,#AA0018 45%,#FFD000 100%);"></span>
+        <span class="theme-btn__name">喜慶紅金 🔴</span>
+      </button>
+
+      <button class="theme-btn" data-theme="warm">
+        <span class="theme-btn__preview" style="background:linear-gradient(135deg,#0e0200 0%,#882200 55%,#FF8800 100%);"></span>
+        <span class="theme-btn__name">溫暖橙光</span>
+      </button>
+
+      <button class="theme-btn" data-theme="vivid">
+        <span class="theme-btn__preview" style="background:linear-gradient(135deg,#E8FFF2 0%,#1A9A50 55%,#FFFFFF 100%);"></span>
+        <span class="theme-btn__name">晴空活力</span>
+      </button>
+
+      <button class="theme-btn" data-theme="sunny">
+        <span class="theme-btn__preview" style="background:linear-gradient(135deg,#FFF9C4 0%,#29B6F6 50%,#00C853 100%);"></span>
+        <span class="theme-btn__name">陽光燦爛 ☀️</span>
+      </button>
+
+      <button class="theme-btn" data-theme="white">
+        <span class="theme-btn__preview" style="background:#FFFFFF;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <svg viewBox="0 0 60 36" style="width:100%;height:100%">
+            <circle cx="10" cy="18" r="9" fill="#f85101" opacity="0.80"/>
+            <path d="M30,4 C24,10 18,16 18,22 C18,28 23,32 30,32 C37,32 42,28 42,22 C42,16 36,10 30,4 Z" fill="#6a4cff" opacity="0.75"/>
+            <circle cx="51" cy="18" r="8" fill="#ee0287" opacity="0.80"/>
+          </svg>
+        </span>
+        <span class="theme-btn__name" style="color:#ccc;">品牌白底 🤍</span>
+      </button>
+
+    </div>
+    <p class="hint" style="margin-bottom:8px;">點選後立即套用至背板，並透過伺服器同步</p>
+
+    <!-- 品牌圖形背景 -->
+    <div class="divider" style="margin-top:4px;margin-bottom:10px;">── 🎨 品牌圖形背景 ──</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:4px;">
+
+      <button class="theme-btn motif-btn" data-motif="0">
+        <span class="theme-btn__preview" style="background:#1a1a2e;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 40 40" style="width:50%;opacity:0.35"><line x1="8" y1="8" x2="32" y2="32" stroke="#fff" stroke-width="4" stroke-linecap="round"/><line x1="32" y1="8" x2="8" y2="32" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>
+        </span>
+        <span class="theme-btn__name">關閉</span>
+      </button>
+
+      <button class="theme-btn motif-btn" data-motif="orange">
+        <span class="theme-btn__preview" style="background:#0d0d0d;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <svg viewBox="0 0 60 40" style="width:100%;height:100%">
+            <circle cx="16" cy="20" r="13" fill="#f85101" opacity="0.85"/>
+            <rect x="34" y="8" width="20" height="20" rx="6" fill="#f85101" opacity="0.7"/>
+            <circle cx="52" cy="32" r="5" fill="#ee0287" opacity="0.7"/>
+          </svg>
+        </span>
+        <span class="theme-btn__name">橙韻</span>
+      </button>
+
+      <button class="theme-btn motif-btn" data-motif="drop">
+        <span class="theme-btn__preview" style="background:#0d0d0d;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <svg viewBox="0 0 60 40" style="width:100%;height:100%">
+            <path d="M18,4 C12,12 4,20 4,27 C4,34 10,38 18,38 C26,38 32,34 32,27 C32,20 24,12 18,4 Z" fill="#6a4cff" opacity="0.9"/>
+            <path d="M46,10 C43,14 38,19 38,23 C38,27 41,30 46,30 C51,30 54,27 54,23 C54,19 49,14 46,10 Z" fill="#4408ff" opacity="0.7"/>
+          </svg>
+        </span>
+        <span class="theme-btn__name">水滴</span>
+      </button>
+
+      <button class="theme-btn motif-btn" data-motif="vivid">
+        <span class="theme-btn__preview" style="background:#0d0d0d;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <svg viewBox="0 0 60 40" style="width:100%;height:100%">
+            <circle cx="14" cy="20" r="11" fill="#f85101" opacity="0.85"/>
+            <path d="M34,4 C28,12 22,18 22,26 C22,33 27,38 34,38 C41,38 46,33 46,26 C46,18 40,12 34,4 Z" fill="#6a4cff" opacity="0.80"/>
+            <circle cx="53" cy="14" r="7" fill="#ee0287" opacity="0.80"/>
+          </svg>
+        </span>
+        <span class="theme-btn__name">三色</span>
+      </button>
+
+      <button class="theme-btn motif-btn" data-motif="geo">
+        <span class="theme-btn__preview" style="background:#0d0d0d;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <svg viewBox="0 0 60 40" style="width:100%;height:100%">
+            <rect x="4"  y="4"  width="12" height="12" rx="3.5" fill="#f85101" opacity="0.9"/>
+            <rect x="20" y="4"  width="12" height="12" rx="3.5" fill="#f85101" opacity="0.9"/>
+            <rect x="4"  y="20" width="12" height="12" rx="3.5" fill="#f85101" opacity="0.9"/>
+            <rect x="20" y="20" width="12" height="12" rx="3.5" fill="#f85101" opacity="0.9"/>
+            <path d="M44,4 C40,10 36,16 36,21 C36,26 39,30 44,30 C49,30 52,26 52,21 C52,16 48,10 44,4 Z" fill="#6a4cff" opacity="0.85"/>
+          </svg>
+        </span>
+        <span class="theme-btn__name">幾何</span>
+      </button>
+
+      <!-- 品牌特顯：種子・水滴・果實 高透明度版 -->
+      <button class="theme-btn motif-btn" data-motif="brand">
+        <span class="theme-btn__preview" style="background:#0d0d0d;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
+          <svg viewBox="0 0 60 40" style="width:100%;height:100%">
+            <!-- 種子 Seed -->
+            <circle cx="13" cy="20" r="12" fill="#f85101" opacity="0.90"/>
+            <!-- 水滴 Water -->
+            <path d="M31,2 C25,9 18,17 18,24 C18,31 24,37 31,37 C38,37 44,31 44,24 C44,17 37,9 31,2 Z" fill="#6a4cff" opacity="0.88"/>
+            <!-- 果實 Fruit -->
+            <circle cx="52" cy="20" r="9" fill="#ee0287" opacity="0.90"/>
+          </svg>
+          <!-- 高亮標籤 -->
+          <span style="position:absolute;top:3px;right:3px;background:#f85101;color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700;line-height:1.4;">★</span>
+        </span>
+        <span class="theme-btn__name">品牌特顯 ★</span>
+      </button>
+
+    </div>
+    <p class="hint" style="margin-bottom:12px;">使用北農官方 Pantone 三原色：橙 #f85101 · 藍紫 #6a4cff · 洋紅 #ee0287</p>
+
+    <!-- 左上角識別區 -->
+    <div class="divider" style="margin-top:4px;margin-bottom:10px;">── 左上角識別區 ──</div>
+
+    <!-- Logo 上傳 -->
+    <label class="label">Logo 圖片</label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+                  border-radius:8px;padding:6px;display:flex;align-items:center;justify-content:center;
+                  min-width:90px;min-height:44px;">
+        <img id="logo-preview" src="assets/logo-beinong-market.png" alt="Logo 預覽"
+             style="max-height:36px;max-width:80px;object-fit:contain;" />
+      </div>
+      <label class="btn" style="cursor:pointer;font-size:12px;padding:8px 12px;margin:0;flex:1;
+                                 text-align:center;">
+        📂 更換 Logo
+        <input type="file" id="logo-file-input" accept="image/*" style="display:none;" />
+      </label>
+      <button class="btn" id="btn-reset-logo"
+              style="font-size:12px;padding:8px 10px;flex-shrink:0;">還原預設</button>
+    </div>
+
+    <!-- 角標文字 (51th) -->
+    <label class="label">右側角標</label>
+    <div class="row" style="gap:8px;margin-bottom:10px;">
+      <input class="input" id="cfg-badge-num" type="text" value="51"
+             style="flex:0 0 72px;text-align:center;font-size:18px;font-weight:700;" />
+      <input class="input" id="cfg-badge-sup" type="text" value="th"
+             style="flex:0 0 56px;text-align:center;" />
+      <button class="btn btn--primary" id="btn-apply-badge" style="flex:1;">套用角標</button>
+      <button class="btn"              id="btn-reset-badge" style="flex-shrink:0;">還原</button>
+    </div>
+    <p class="hint" style="margin-bottom:12px;">左欄為數字（51），右欄為上標後綴（th）</p>
+
+    <div class="divider">── 主標題 ──</div>
+
+    <label class="label">主標題</label>
+    <input  class="input" id="cfg-title" type="text" value="臺北農產" />
+
+    <!-- 主標題色彩動畫選擇 -->
+    <div class="divider" style="margin-top:0;margin-bottom:10px;">── ✨ 主標題動畫 ──</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:4px;">
+
+      <button class="theme-btn title-anim-btn" data-anim="0">
+        <span class="theme-btn__preview" style="background:#1a1a2e;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:18px;">✕</span>
+        <span class="theme-btn__name">關閉</span>
+      </button>
+
+      <button class="theme-btn title-anim-btn" data-anim="1">
+        <span class="theme-btn__preview" style="background:linear-gradient(90deg,#00A0E9,#E6005C,#F39800,#00A0E9);"></span>
+        <span class="theme-btn__name">彩虹</span>
+      </button>
+
+      <button class="theme-btn title-anim-btn" data-anim="2">
+        <span class="theme-btn__preview" style="background:linear-gradient(90deg,#FF8C00,#FFD700,#FFFBE0,#FFD700,#FF8C00);"></span>
+        <span class="theme-btn__name">金光</span>
+      </button>
+
+      <button class="theme-btn title-anim-btn" data-anim="3">
+        <span class="theme-btn__preview" style="background:linear-gradient(90deg,#FF0025,#FFD000,#FF6600,#FFD000,#FF0025);"></span>
+        <span class="theme-btn__name">紅金</span>
+      </button>
+
+      <button class="theme-btn title-anim-btn" data-anim="4">
+        <span class="theme-btn__preview" style="background:linear-gradient(90deg,#00E870,#00C8FF,#9B5CFF,#E6005C,#00E870);"></span>
+        <span class="theme-btn__name">極光</span>
+      </button>
+
+    </div>
+
+    <label class="label">年份標籤</label>
+    <input  class="input" id="cfg-year" type="text" value="115 年度" />
+
+    <label class="label">活動名稱</label>
+    <input  class="input" id="cfg-event" type="text" value="股東常會" />
+
+    <label class="label">年份小標（Eyebrow）</label>
+    <input  class="input" id="cfg-eyebrow" type="text" value="2025 · TAPMC" />
+
+    <label class="label">英文副標</label>
+    <input  class="input" id="cfg-footnote" type="text"
+            value="Annual General Meeting of Shareholders" />
+
+    <button class="btn btn--primary" id="btn-apply-text">套用至背板</button>
+    <button class="btn"              id="btn-reset-text">還原預設</button>
+
+    <!-- 跑馬燈 -->
+    <div class="divider" style="margin-top:8px;">── 底部跑馬燈 ──</div>
+
+    <label class="label">跑馬燈內容（每行一則）</label>
+    <textarea class="textarea" id="cfg-ticker" rows="6"
+              placeholder="每行輸入一則文字，顯示時會自動以 ◆ 分隔循環捲動"></textarea>
+
+    <button class="btn btn--primary" id="btn-apply-ticker">套用跑馬燈</button>
+    <button class="btn"              id="btn-reset-ticker">還原預設</button>
+  </div>
+
+  <!-- ── Tab 3：新增元素 ── -->
+  <div class="pane" id="tab-add">
+    <label class="label">元素類型</label>
+    <select class="select" id="new-type">
+      <option value="float">浮動文字</option>
+      <option value="lower-third">下方條（Lower Third）</option>
+      <option value="announce">公告框</option>
+      <option value="countdown">倒數計時</option>
+      <option value="image">圖片</option>
+      <option value="video">影片</option>
+    </select>
+
+    <!-- 文字輸入（非圖片類型） -->
+    <div id="add-text-group">
+      <label class="label">內容文字</label>
+      <textarea class="textarea" id="new-content" rows="3"
+                placeholder="輸入要顯示的文字…"></textarea>
+    </div>
+
+    <!-- 圖片上傳（type=image 才顯示） -->
+    <div id="add-image-group" style="display:none;flex-direction:column;gap:10px;">
+      <label class="label">圖片（可選多張，自動輪播）</label>
+      <label class="img-upload-btn" id="img-upload-label">
+        <input type="file" id="new-image-file" accept="image/*"
+               style="display:none;" multiple />
+        <span id="img-upload-text">📂　點擊選取圖片（可多選）</span>
+      </label>
+
+      <!-- 已選圖片縮圖列表 -->
+      <div id="img-slides-list" style="display:none;flex-direction:column;gap:6px;"></div>
+
+      <!-- 輪播間隔（≥2 張時顯示） -->
+      <div id="img-interval-row" style="display:none;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:rgba(255,255,255,0.65);flex:1;">輪播間隔</span>
+        <input class="input" id="img-interval" type="number" min="1" max="60" value="5"
+               style="width:72px;text-align:center;padding:6px;" />
+        <span style="font-size:12px;color:rgba(255,255,255,0.45);">秒 / 張</span>
+      </div>
+
+      <!-- 並列 / 全螢幕 開關 -->
+      <div style="display:flex;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;
+                    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+                    border-radius:8px;padding:8px 10px;">
+          <span style="font-size:12px;color:rgba(255,255,255,0.65);flex:1;">◫ 左右並列</span>
+          <button class="btn" id="btn-img-split"
+                  style="min-width:72px;font-size:12px;padding:5px 10px;">○ 關閉</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex:1;
+                    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+                    border-radius:8px;padding:8px 10px;">
+          <span style="font-size:12px;color:rgba(255,255,255,0.65);flex:1;">🖥 全螢幕</span>
+          <button class="btn" id="btn-img-fullscreen"
+                  style="min-width:72px;font-size:12px;padding:5px 10px;">○ 關閉</button>
+        </div>
+      </div>
+      <p class="hint">並列：兩張圖左右各佔半螢幕；全螢幕：單張鋪滿整個畫面</p>
+    </div>
+
+    <!-- 影片上傳（type=video 才顯示） -->
+    <div id="add-video-group" style="display:none;flex-direction:column;gap:10px;">
+      <label class="label">選擇影片檔案</label>
+      <label class="img-upload-btn" id="vid-upload-label">
+        <input type="file" id="new-video-file" accept="video/*"
+               style="display:none;" />
+        <span id="vid-upload-text">🎬　點擊選取影片</span>
+      </label>
+      <div id="vid-preview-wrap" style="display:none;">
+        <p id="vid-info" class="hint"></p>
+      </div>
+    </div>
+
+    <!-- 大小（文字=px，圖片/影片=vw） -->
+    <label class="label" id="size-label">字體大小（<span id="size-val">40</span><span id="size-unit">px</span>）</label>
+    <input class="range" id="new-size" type="range" min="16" max="120" value="40"
+           oninput="document.getElementById('size-val').textContent=this.value" />
+
+    <!-- 顏色（圖片不顯示） -->
+    <div id="add-color-group">
+      <label class="label">顏色</label>
+      <div class="colors">
+        <button class="color-btn color-btn--white color-btn--active" data-color="white">白</button>
+        <button class="color-btn color-btn--red"    data-color="red">紅</button>
+        <button class="color-btn color-btn--orange" data-color="orange">橘</button>
+        <button class="color-btn color-btn--blue"   data-color="blue">藍</button>
+        <button class="color-btn color-btn--gradient" data-color="gradient">漸</button>
+      </div>
+    </div>
+
+    <label class="label">位置</label>
+    <select class="select" id="new-position">
+      <option value="center">正中央</option>
+      <option value="upper">上方中央</option>
+      <option value="lower">下方中央</option>
+      <option value="lower-left">左下角</option>
+      <option value="lower-right">右下角</option>
+      <option value="upper-left">左上角</option>
+      <option value="upper-right">右上角</option>
+    </select>
+
+    <label class="label">自動消失（<span id="dur-val">0</span> 秒，0 = 永久）</label>
+    <input class="range" id="new-duration" type="range" min="0" max="120" value="0" step="5"
+           oninput="document.getElementById('dur-val').textContent=this.value" />
+
+    <button class="btn btn--primary" id="btn-add-el">新增至背板</button>
+  </div>
+
+  <!-- ── Tab 4：元素管理 ── -->
+  <div class="pane" id="tab-elements">
+    <p class="hint">已新增的元素列表，可即時顯示／隱藏或刪除。</p>
+    <div id="el-list">
+      <p class="empty">尚未新增任何元素</p>
+    </div>
+    <button class="btn btn--danger" id="btn-clear-all">清除全部元素</button>
+  </div>
+
+  <!-- ── Tab 5：序列設定 ── -->
+  <div class="pane" id="tab-seq">
+
+    <!-- 控制列 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <span class="label" style="margin:0;">序列播放控制</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn--primary" id="btn-seq-start"
+                style="padding:9px 18px;">▶ 開始</button>
+        <button class="btn btn--danger"  id="btn-seq-stop"
+                style="padding:9px 18px;">■ 停止</button>
+      </div>
+    </div>
+
+    <p class="hint" id="seq-status-hint">尚未執行</p>
+
+    <!-- 儲存清單 -->
+    <div class="card" style="gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <p class="label" style="margin:0;">📁 已儲存清單</p>
+        <button class="btn btn--primary" id="btn-seq-save-as"
+                style="padding:6px 14px;font-size:12px;white-space:nowrap;">＋ 另存目前序列</button>
+      </div>
+
+      <!-- 儲存名稱輸入（點按鈕後展開） -->
+      <div id="seq-save-form" style="display:none;flex-direction:column;gap:8px;">
+        <input class="input" id="seq-save-name" type="text"
+               placeholder="輸入清單名稱，例如：開幕流程" style="font-size:13px;" />
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn--primary" id="btn-seq-save-confirm" style="flex:1;">儲存</button>
+          <button class="btn"              id="btn-seq-save-cancel"  style="flex:1;">取消</button>
+        </div>
+      </div>
+
+      <!-- 已儲存清單列表 -->
+      <div id="seq-preset-list">
+        <p class="empty" style="font-size:11px;">尚未儲存任何序列</p>
+      </div>
+    </div>
+
+    <!-- 步驟列表 -->
+    <div id="seq-step-list" style="display:flex;flex-direction:column;gap:8px;">
+      <p class="empty">尚未設定步驟，請在下方新增</p>
+    </div>
+
+    <!-- 新增步驟 -->
+    <div class="card" style="margin-top:4px;">
+      <p class="label" style="margin:0;">＋ 新增步驟</p>
+
+      <select class="select" id="seq-type">
+        <option value="countdown">倒數計時</option>
+        <option value="announce">公告框</option>
+        <option value="float">浮動文字</option>
+        <option value="lower-third">下方條</option>
+        <option value="image">圖片</option>
+        <option value="video">影片</option>
+      </select>
+
+      <!-- 文字輸入 -->
+      <div id="seq-text-group">
+        <textarea class="textarea" id="seq-content" rows="2"
+                  placeholder="文字內容 / 倒數秒數（倒數請填純數字）"></textarea>
+      </div>
+
+      <!-- 媒體上傳（圖片/影片） -->
+      <div id="seq-media-group" style="display:none;flex-direction:column;gap:8px;">
+        <label class="img-upload-btn" id="seq-media-label">
+          <input type="file" id="seq-media-file" accept="video/*,image/*"
+                 style="display:none;" />
+          <span id="seq-media-text">📂 選取媒體檔案</span>
+        </label>
+        <div id="seq-media-preview" style="display:none;">
+          <p id="seq-media-info" class="hint"></p>
+        </div>
+      </div>
+
+      <!-- 大小 -->
+      <label class="label">大小（<span id="seq-size-val">60</span><span id="seq-size-unit">vw</span>）</label>
+      <input class="range" id="seq-size" type="range" min="10" max="100" value="60"
+             oninput="document.getElementById('seq-size-val').textContent=this.value" />
+
+      <!-- 顏色（媒體不顯示） -->
+      <div id="seq-color-group" style="display:none;">
+        <label class="label">顏色</label>
+        <div class="colors">
+          <button class="color-btn color-btn--white color-btn--active" data-seq-color="white">白</button>
+          <button class="color-btn color-btn--red"      data-seq-color="red">紅</button>
+          <button class="color-btn color-btn--orange"   data-seq-color="orange">橘</button>
+          <button class="color-btn color-btn--blue"     data-seq-color="blue">藍</button>
+          <button class="color-btn color-btn--gradient" data-seq-color="gradient">漸</button>
+        </div>
+      </div>
+
+      <!-- 位置 -->
+      <div class="row">
+        <label class="label" style="margin:0;white-space:nowrap;">位置</label>
+        <select class="select" id="seq-position">
+          <option value="center">正中央</option>
+          <option value="upper">上方</option>
+          <option value="lower">下方</option>
+          <option value="lower-left">左下</option>
+          <option value="lower-right">右下</option>
+        </select>
+      </div>
+
+      <!-- 持續秒數 -->
+      <label class="label">持續秒數（影片填 0 = 播完自動結束）</label>
+      <input class="input" id="seq-dur" type="number" min="0" max="600" value="10" />
+
+      <button class="btn btn--primary" id="btn-seq-add" style="width:100%;margin-top:4px;">
+        ＋ 加入序列
+      </button>
+    </div>
+
+    <button class="btn btn--danger" id="btn-seq-clear" style="margin-top:4px;">
+      清空序列
+    </button>
+  </div>
+
+</div><!-- /page -->
+
+<!-- Toast 提示 -->
+<div class="toast" id="toast"></div>
+
+<script src="js/tapmc-server-config.js"></script>
+<script src="js/filestore.js"></script>
+<script src="js/serverstore.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

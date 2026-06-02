@@ -1,0 +1,22 @@
+[
+  {
+    "label": "市場幹部儀表板",
+    "url": "./index-1.html"
+  },
+  {
+    "label": "台灣農業氣象地圖",
+    "url": "http://192.168.127.42:8000"
+  },
+  {
+    "label": "Whisper 語音轉文字",
+    "url": "/faster-whisper"
+  },
+  {
+    "label": "北農 AI 助理",
+    "url": "/beinong-ai"
+  },
+  {
+    "label": "合署辦公室交接系統",
+    "url": "http://192.168.127.42:8326"
+  }
+]

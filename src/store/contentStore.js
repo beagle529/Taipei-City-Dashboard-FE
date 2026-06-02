@@ -17,6 +17,8 @@ export const useContentStore = defineStore("content", {
 		dashboards: [],
 		// Stores all components data. Reference the structure in /public/dashboards/all_components.json
 		components: {},
+		// Stores the id of the component to highlight after search navigation
+		highlightComponentId: null,
 		// Picks out the components that are map layers and stores them here
 		mapLayers: [],
 		// Picks out the components that are favorites and stores them here
@@ -72,7 +74,7 @@ export const useContentStore = defineStore("content", {
 			axios
 				.get(`${BASE_URL}/dashboards/all_dashboards.json`)
 				.then((rs) => {
-					this.dashboards = rs.data.data;
+					this.dashboards = rs.data.data.filter(d => !d.hidden);
 					if (!this.currentDashboard.index) {
 						this.currentDashboard.index = this.dashboards[0].index;
 						router.replace({
@@ -133,11 +135,9 @@ export const useContentStore = defineStore("content", {
 			}
 			this.currentDashboard.name = currentDashboardInfo.name;
 			this.currentDashboard.icon = currentDashboardInfo.icon;
-			this.currentDashboard.content = currentDashboardInfo.components.map(
-				(item) => {
-					return this.components[item];
-				}
-			);
+			this.currentDashboard.content = currentDashboardInfo.components
+				.map((item) => this.components[item])
+				.filter(Boolean);
 			// no need to call additional chart data APIs for the map layers dashboard
 			if (this.currentDashboard.index === "map-layers") {
 				return;
@@ -156,6 +156,12 @@ export const useContentStore = defineStore("content", {
 					})
 					.catch((e) => {
 						console.error(e);
+						// 若 chart_data 尚未是陣列（null / undefined），
+						// 強制設為空陣列，讓自行取資料的元件（如 MarketPriceWidget）
+						// 能正常渲染，而不是永遠卡在 loading spinner。
+						if (!Array.isArray(this.currentDashboard.content[index].chart_data)) {
+							this.currentDashboard.content[index].chart_data = [];
+						}
 					});
 				if (this.currentDashboard.content[index].history_data) {
 					axios
